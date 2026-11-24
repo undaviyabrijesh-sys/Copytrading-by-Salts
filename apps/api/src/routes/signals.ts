@@ -82,15 +82,16 @@ export async function registerSignalRoutes(app: FastifyInstance) {\n
       select: { id: true }
     });
     if (!connection) return reply.code(409).send({ error: "A connected source broker account owned by this host is required." });
-    const publishedListing = await prisma.hostListing.findFirst({
-      where: { hostUserId: actor.id, market: body.market, status: "PUBLISHED" },
-      select: { id: true }
-    });
-    if (!publishedListing) return reply.code(409).send({ error: "Publish a listing for this market before sending signals." });
-
     const requestId = randomBytes(12).toString("hex");
     try {
       const result = await prisma.$transaction(async (tx) => {
+        const publishedListing = await tx.hostListing.findFirst({
+          where: { hostUserId: actor.id, market: body.market, status: "PUBLISHED" },
+          select: { id: true }
+        });
+        if (!publishedListing) {
+          throw Object.assign(new Error("Publish a listing for this market before sending signals."), { statusCode: 409 });
+        }
         const signal = await tx.signal.create({ data: {
           idempotencyKey: body.idempotencyKey,
           hostUserId: actor.id,
