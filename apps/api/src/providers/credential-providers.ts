@@ -26,8 +26,16 @@ export const credentialProviders: CredentialProvider[] = [
     ["KOTAK_NEO", "Kotak Neo", "https://www.kotakneo.com/"],
     ["ALICE_BLUE", "Alice Blue ANT", "https://ant.aliceblueonline.com/productdocumentation/"]
   ] as const).map(([id, label, docsUrl]) => ({
-    id, label, market: "INDIA" as const, auth: "OAUTH" as const, fields: [], docsUrl, connectEnabled: false,
-    note: "OAuth/partner flow is not implemented. No credential form is available for this provider yet."
+    id, label, market: "INDIA" as const, auth: "OAUTH" as const,
+    fields: [
+      { key: "clientId", label: "Broker app / client ID", secret: true },
+      { key: "clientSecret", label: "Broker app / client secret", secret: true },
+      { key: "apiKey", label: "Broker-issued API key", secret: true },
+      { key: "apiSecret", label: "Broker-issued API secret", secret: true },
+      { key: "accessToken", label: "Broker-issued access token", secret: true }
+    ],
+    docsUrl, connectEnabled: true,
+    note: "Secure credential intake only. Enter only API/app credentials explicitly issued for API use. OAuth callback, account verification and trading remain unavailable until provider-specific integration is completed."
   })),
   ...([
     ["IIFL", "IIFL Securities", "https://www.iiflcapital.com/"],
@@ -59,7 +67,15 @@ export const credentialProviders: CredentialProvider[] = [
     ["GOODWILL", "Goodwill Wealth Management", "https://www.gwcindia.in/"],
     ["ARROW", "Arrow", "https://arrowtrading.in/"]
   ] as const).map(([id, label, docsUrl]) => ({
-    id, label, market: "INDIA" as const, auth: "OAUTH" as const, fields: [], docsUrl, connectEnabled: false,
-    note: "Catalogue entry only. Official API access, current authentication, platform/vendor approval, market segments, order lifecycle and IP requirements must be verified before enabling a connection."
+    id, label, market: "INDIA" as const, auth: "OAUTH" as const,
+    fields: [
+      { key: "clientId", label: "Broker app / client ID", secret: true },
+      { key: "clientSecret", label: "Broker app / client secret", secret: true },
+      { key: "apiKey", label: "Broker-issued API key", secret: true },
+      { key: "apiSecret", label: "Broker-issued API secret", secret: true },
+      { key: "accessToken", label: "Broker-issued access token", secret: true }
+    ],
+    docsUrl, connectEnabled: true,
+    note: "Secure credential intake only. This does not confirm API availability or enable connection/trading. Provider authentication, API access, account verification, permissions, market segments and order lifecycle must be verified first."
   }))
 ];
