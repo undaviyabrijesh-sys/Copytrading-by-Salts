@@ -4,7 +4,7 @@ Private, invite-only, multi-user copy-trading platform. India and Crypto are sep
 
 ## Current implementation status
 
-This branch starts Phase 1 foundations only. It does not yet connect to a live broker, execute orders, provision AWS resources, or enable live trading. Broker integrations must be implemented and tested individually against current official documentation and approved terms.
+This branch now includes invite-only authentication, MFA, owner administration, host listing management, subscriber marketplace controls, PostgreSQL migrations and a domain-level paper-routing risk policy. It does not yet connect to a live broker, execute or simulate copied orders, provision AWS resources, or enable live trading. Broker integrations must be implemented and tested individually against current official documentation and approved terms.
 
 ## Stack
 
