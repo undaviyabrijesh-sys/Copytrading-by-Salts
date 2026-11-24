@@ -103,6 +103,7 @@ model Invite {
   usedById    String?
   revokedAt   DateTime?
   createdAt   DateTime @default(now())
+  @@index([createdById])
 }
 
 model DisclosureVersion {
@@ -126,6 +127,7 @@ model DisclosureAcceptance {
   user        User @relation(fields: [userId], references: [id])
   version     DisclosureVersion @relation(fields: [versionId], references: [id])
   @@unique([userId, versionId])
+  @@index([versionId])
 }
 
 model BrokerConnection {
@@ -160,6 +162,7 @@ model HostListing {
   host            User @relation(fields: [hostUserId], references: [id])
   subscriptions   HostSubscription[]
   @@index([market, status])
+  @@index([hostUserId])
 }
 
 model HostSubscription {
@@ -178,6 +181,8 @@ model HostSubscription {
   listing     HostListing @relation(fields: [listingId], references: [id])
   @@unique([subscriberId, listingId])
   @@index([subscriberId, market, status])
+  @@index([hostUserId])
+  @@index([listingId])
 }
 
 model Signal {
@@ -214,6 +219,7 @@ model CopyOrder {
   signal          Signal @relation(fields: [signalId], references: [id])
   @@unique([signalId, subscriberId, connectionId])
   @@index([subscriberId, status, createdAt])
+  @@index([connectionId])
 }
 
 model AuditEvent {
@@ -228,6 +234,7 @@ model AuditEvent {
   createdAt   DateTime @default(now())
   actor       User? @relation("AuditActor", fields: [actorId], references: [id])
   @@index([tenantId, createdAt])
+  @@index([actorId])
 }
 
 
