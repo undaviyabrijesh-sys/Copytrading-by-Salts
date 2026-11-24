@@ -79,6 +79,14 @@ Tests have been added for these rules but remain unexecuted/unverified due the G
 - Corrected the provider note: Dhan is currently credential-intake-only. Its individual consent start, callback correlation and access-token exchange are not implemented, so the form must not imply that saving credentials can authenticate or connect the account.
 - This is a contract/documentation correction only. No Dhan authentication or order execution has been enabled, and no build/test pass is claimed.
 
+## Broker connection framework hardening — 24 November 2026
+
+- Fixed a callback URI defect: the OAuth start route previously constructed `/{provider}/callback`, while Fastify actually registers `/api/v1/brokers/oauth/:provider/callback`. Authorization attempts would therefore register/send a redirect URI that did not match the application's callback route. The route now uses a shared validated callback-URI builder that generates the registered path and rejects non-HTTPS, malformed, query-bearing or unsupported-provider bases.
+- Added focused unit tests for the exact callback path, configured API path prefixes, HTTPS enforcement and provider allowlisting. These tests are committed but have not been executed in this environment.
+- Updated the Dhan broker card in the connections UI to match the API contract keys: `clientId`, `appId`, `appSecret`. It now clearly says Dhan is credential-intake-only and that saving credentials does not authenticate or connect the account. The user is explicitly told not to submit broker password, PIN, OTP or TOTP to Salts.
+- This work supports the intended user-owned account model: each host/subscriber connects their own broker account; the platform does not need to own or borrow broker accounts for each provider. Provider login and account verification remain provider-specific and must succeed before status is CONNECTED.
+- No live execution, broker order adapter or permission certification was enabled. Build/test validation remains pending; no successful test result is claimed.
+
 ## Authenticated-user context correction — 24 November 2026
 
 - Fixed the authenticated request context used by API routes: `currentUser()` now selects and returns the account `status` field alongside the existing tenant-scoped identity fields.
