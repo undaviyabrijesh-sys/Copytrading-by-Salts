@@ -4,6 +4,7 @@ import { currentUser, assertTrustedOrigin } from "./auth.js";
 import { credentialProviders } from "../providers/credential-providers.js";
 import { decryptBrokerSecret, encryptBrokerSecret } from "../security/broker-vault.js";
 import { verifyDeltaAccount } from "../providers/delta-auth.js";
+import { verifyGrowwAccount } from "../providers/groww-auth.js";
 
 export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
   app.get("/api/v1/brokers/connections", async (request, reply) => {
@@ -89,47 +90,57 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
       select: { id: true, provider: true, market: true, encryptedSecret: true }
     });
     if (!connection) return reply.code(404).send({ error: "Broker connection not found." });
-    if (connection.provider !== "DELTA_INDIA" || connection.market !== "CRYPTO") {
+    if (!((connection.provider === "DELTA_INDIA" && connection.market === "CRYPTO") || (connection.provider === "GROWW" && connection.market === "INDIA"))) {
       return reply.code(409).send({ error: "Provider-specific verification is not implemented for this broker yet. Credentials remain encrypted and the connection is not marked connected." });
     }
 
     try {
       const credentials = await decryptBrokerSecret(connection.encryptedSecret);
-      await verifyDeltaAccount(credentials);
+      let identity: Record<string, unknown>;
+      let expiresAt: Date | null = null;
+      if (connection.provider === "DELTA_INDIA") {
+        await verifyDeltaAccount(credentials);
+        identity = { authentication: "VERIFIED", accountIdentity: "AUTHENTICATED_BY_SIGNED_ACCOUNT_ENDPOINT" };
+      } else {
+        const profile = await verifyGrowwAccount(credentials.accessToken ?? "");
+        identity = { authentication: "VERIFIED", accountIdentity: "VERIFIED", accountId: profile.accountId, ucc: profile.ucc, activeSegments: profile.segments };
+        const now = new Date();
+        const ist = new Date(now.getTime() + 330 * 60_000);
+        const nextSix = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), 6, 0));
+        if (nextSix <= ist) nextSix.setUTCDate(nextSix.getUTCDate() + 1);
+        expiresAt = new Date(nextSix.getTime() - 330 * 60_000);
+      }
       const now = new Date();
       await prisma.$transaction([
         prisma.brokerConnection.update({
           where: { id: connection.id },
           data: {
-            status: "CONNECTED",
-            lastHealthAt: now,
-            permissions: {
-              authentication: "VERIFIED",
-              accountIdentity: "AUTHENTICATED_BY_SIGNED_ACCOUNT_ENDPOINT",
-              tradingPermission: "UNKNOWN",
-              withdrawalPermission: "NOT_VERIFIED",
-              liveExecution: "DISABLED"
-            }
+            status: "CONNECTED", lastHealthAt: now, tokenExpiresAt: expiresAt,
+            permissions: { ...identity, tradingPermission: "UNKNOWN", withdrawalPermission: "NOT_VERIFIED", liveExecution: "DISABLED" }
           }
         }),
         prisma.auditEvent.create({
           data: {
             actorId: actor.id, tenantId: actor.id, action: "BROKER_CONNECTION_AUTHENTICATED",
             targetType: "BrokerConnection", targetId: connection.id, requestId: request.id,
-            metadata: { provider: "DELTA_INDIA", market: "CRYPTO", verification: "SIGNED_READ_ONLY_ACCOUNT_ENDPOINT" }
+            metadata: { provider: connection.provider, market: connection.market, verification: connection.provider === "DELTA_INDIA" ? "SIGNED_READ_ONLY_ACCOUNT_ENDPOINT" : "GROWW_READ_ONLY_USER_PROFILE" }
           }
         })
       ]);
       reply.header("cache-control", "no-store");
-      return { ok: true, status: "CONNECTED", message: "Delta API authentication succeeded. Trading permissions and copy execution remain separately unverified and live execution stays disabled." };
+      return { ok: true, status: "CONNECTED", message: `${connection.provider} account authentication succeeded. Trading permissions remain unverified and live execution stays disabled.` };
     } catch (error) {
-      const code = error instanceof Error ? error.message : "DELTA_PROVIDER_UNAVAILABLE";
+      const code = error instanceof Error ? error.message : "BROKER_PROVIDER_UNAVAILABLE";
       const safeErrors: Record<string, string> = {
         DELTA_CREDENTIALS_INCOMPLETE: "The saved Delta API key/secret pair is incomplete. Replace the credentials.",
         DELTA_AUTHENTICATION_FAILED: "Delta rejected the API key or signature. Check that these are Delta India production credentials.",
         DELTA_IP_OR_PERMISSION_CHECK_FAILED: "Delta rejected the request because the egress IP may not be allowlisted or the key lacks read permission.",
         DELTA_RATE_LIMITED: "Delta rate limit reached. Wait before retrying.",
-        DELTA_PROVIDER_UNAVAILABLE: "Delta account verification is temporarily unavailable. Try again later."
+        DELTA_PROVIDER_UNAVAILABLE: "Delta account verification is temporarily unavailable. Try again later.",
+        GROWW_TOKEN_MISSING: "The saved Groww access token is missing. Generate a fresh token in Groww Trading APIs.",
+        GROWW_AUTHENTICATION_FAILED: "Groww rejected the access token. Generate a fresh daily token.",
+        GROWW_RATE_LIMITED: "Groww rate limit reached. Wait before retrying.",
+        GROWW_PROVIDER_UNAVAILABLE: "Groww account verification is temporarily unavailable. Try again later."
       };
       await prisma.brokerConnection.update({
         where: { id: connection.id },
@@ -139,10 +150,10 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
         data: {
           actorId: actor.id, tenantId: actor.id, action: "BROKER_CONNECTION_AUTHENTICATION_FAILED",
           targetType: "BrokerConnection", targetId: connection.id, requestId: request.id,
-          metadata: { provider: "DELTA_INDIA", market: "CRYPTO", failureCode: code }
+          metadata: { provider: connection.provider, market: connection.market, failureCode: code }
         }
       });
-      request.log.warn({ provider: "DELTA_INDIA", failureCode: code, connectionId: connection.id }, "Broker account verification failed");
+      request.log.warn({ provider: connection.provider, failureCode: code, connectionId: connection.id }, "Broker account verification failed");
       return reply.code(422).send({ error: safeErrors[code] ?? "Broker verification failed. Credentials remain encrypted." });
     }
   });
