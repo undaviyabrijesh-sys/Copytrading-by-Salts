@@ -46,7 +46,7 @@ export interface PaperDestinationContext {
 }
 
 function decimalParts(value: string): { coefficient: bigint; scale: number } | null {
-  if (!/^\\d+(?:\\.\\d+)?$/.test(value)) return null;
+  if (!/^\d+(?:\.\d+)?$/.test(value)) return null;
   const [whole, fraction = ""] = value.split(".");
   return { coefficient: BigInt(whole + fraction), scale: fraction.length };
 }
@@ -56,7 +56,7 @@ function formatDecimal(coefficient: bigint, scale: number): string {
   let digits = (negative ? -coefficient : coefficient).toString().padStart(scale + 1, "0");
   if (scale > 0) {
     digits = digits.slice(0, -scale) + "." + digits.slice(-scale);
-    digits = digits.replace(/\\.?0+$/, "");
+    digits = digits.replace(/\.?0+$/, "");
   }
   return (negative ? "-" : "") + digits;
 }
