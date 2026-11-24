@@ -29,4 +29,37 @@ export const credentialProviders: CredentialProvider[] = [
     id, label, market: "INDIA" as const, auth: "OAUTH" as const, fields: [], docsUrl, connectEnabled: false,
     note: "OAuth/partner flow is not implemented. No credential form is available for this provider yet."
   }))
+  ...([
+    ["IIFL", "IIFL Securities", "https://www.iiflcapital.com/"],
+    ["MOTILAL_OSWAL", "Motilal Oswal", "https://www.motilaloswal.com/"],
+    ["SAMCO", "SAMCO", "https://www.samco.in/"],
+    ["TRADEJINI", "Tradejini", "https://tradejini.com/"],
+    ["NUVAMA", "Nuvama", "https://www.nuvama.com/"],
+    ["HDFC_SKY", "HDFC SKY", "https://www.hdfcsky.com/"],
+    ["MSTOCK", "m.Stock", "https://www.mstock.com/"],
+    ["SHAREKHAN", "Sharekhan", "https://www.sharekhan.com/"],
+    ["AXIS_DIRECT", "Axis Direct", "https://www.axisdirect.in/"],
+    ["CHOICE", "Choice Broking", "https://choiceindia.com/"],
+    ["JAINAM", "Jainam", "https://www.jainam.in/"],
+    ["MASTERTRUST", "Mastertrust", "https://mastertrust.co.in/"],
+    ["ZEBU", "Zebu", "https://zebu.in/"],
+    ["SAS_ONLINE", "SAS Online", "https://www.sasonline.in/"],
+    ["PAYTM_MONEY", "Paytm Money", "https://www.paytmmoney.com/"],
+    ["POCKETFUL", "Pocketful", "https://pocketful.in/"],
+    ["FIRSTOCK", "Firstock", "https://firstock.in/"],
+    ["STOXKART", "Stoxkart", "https://stoxkart.com/"],
+    ["PROFITMART", "Profitmart", "https://profitmart.in/"],
+    ["WISDOM_CAPITAL", "Wisdom Capital", "https://wisdomcapital.in/"],
+    ["COMPOSITE_EDGE", "Composite Edge", "https://compositedge.com/"],
+    ["DEFINEDGE", "Definedge", "https://www.definedge.com/"],
+    ["INDMONEY", "INDmoney", "https://www.indmoney.com/"],
+    ["ANAND_RATHI", "Anand Rathi", "https://www.anandrathi.com/"],
+    ["RELIGARE", "Religare Broking", "https://www.religareonline.com/"],
+    ["SMC", "SMC Global", "https://www.smcindiaonline.com/"],
+    ["GOODWILL", "Goodwill Wealth Management", "https://www.gwcindia.in/"],
+    ["ARROW", "Arrow", "https://arrowtrading.in/"]
+  ] as const).map(([id, label, docsUrl]) => ({
+    id, label, market: "INDIA" as const, auth: "OAUTH" as const, fields: [], docsUrl, connectEnabled: false,
+    note: "Catalogue entry only. Official API access, current authentication, platform/vendor approval, market segments, order lifecycle and IP requirements must be verified before enabling a connection."
+  }))
 ];
