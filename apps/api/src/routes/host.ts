@@ -107,7 +107,13 @@ export async function registerHostRoutes(app: FastifyInstance) {
     const { listingId } = request.params as { listingId: string };
     const existing = await prisma.hostListing.findFirst({ where: { id: listingId, hostUserId: actor.id, status: { not: "REMOVED" } } });
     if (!existing) return reply.code(404).send({ error: "Listing not found." });
-    await prisma.hostListing.update({ where: { id: listingId, hostUserId: actor.id }, data: { status: "REMOVED" } });
+    await prisma.$transaction(async (tx) => {
+      await tx.hostListing.update({ where: { id: listingId, hostUserId: actor.id }, data: { status: "REMOVED" } });
+      await tx.hostSubscription.updateMany({
+        where: { listingId, status: "ACTIVE" },
+        data: { status: "PAUSED" }
+      });
+    });
     await prisma.auditEvent.create({
       data: { actorId: actor.id, tenantId: actor.id, action: "HOST_LISTING_REMOVED", targetType: "HostListing", targetId: listingId, requestId: randomBytes(12).toString("hex") }
     });
