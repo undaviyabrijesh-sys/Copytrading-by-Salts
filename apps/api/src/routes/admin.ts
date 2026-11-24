@@ -85,6 +85,60 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     return { user };
   });
 
+
+  app.get("/api/v1/admin/listings", async (request, reply) => {
+    const actor = await requireAdmin(request, reply);
+    if (!actor) return;
+    const listings = await prisma.hostListing.findMany({
+      where: { status: { not: "REMOVED" } },
+      select: {
+        id: true, hostUserId: true, market: true, title: true, status: true,
+        updatedAt: true, host: { select: { displayName: true, email: true } },
+        _count: { select: { subscriptions: { where: { status: "ACTIVE" } } } }
+      },
+      orderBy: { updatedAt: "desc" }, take: 200
+    });
+    return { listings };
+  });
+
+  app.patch("/api/v1/admin/listings/:listingId/moderation", {
+    schema: {
+      params: { type: "object", required: ["listingId"], properties: { listingId: { type: "string", minLength: 1 } } },
+      body: { type: "object", additionalProperties: false, required: ["action"], properties: {
+        action: { type: "string", enum: ["SUSPEND", "REINSTATE"] }
+      } }
+    }
+  }, async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await requireAdmin(request, reply);
+    if (!actor) return;
+    const { listingId } = request.params as { listingId: string };
+    const { action } = request.body as { action: "SUSPEND" | "REINSTATE" };
+    const existing = await prisma.hostListing.findFirst({
+      where: { id: listingId, status: { not: "REMOVED" } },
+      select: { id: true, hostUserId: true, status: true }
+    });
+    if (!existing) return reply.code(404).send({ error: "Listing not found." });
+    if (action === "SUSPEND" && existing.status === "SUSPENDED") return reply.code(409).send({ error: "Listing is already suspended." });
+    if (action === "REINSTATE" && existing.status !== "SUSPENDED") return reply.code(409).send({ error: "Only suspended listings can be reinstated." });
+    const nextStatus = action === "SUSPEND" ? "SUSPENDED" : "DRAFT";
+    const listing = await prisma.$transaction(async (tx) => {
+      const updated = await tx.hostListing.update({ where: { id: listingId }, data: { status: nextStatus } });
+      if (action === "SUSPEND") await tx.hostSubscription.updateMany({
+        where: { listingId, status: "ACTIVE" }, data: { status: "PAUSED" }
+      });
+      return updated;
+    });
+    await prisma.auditEvent.create({ data: {
+      actorId: actor.id, tenantId: existing.hostUserId,
+      action: action === "SUSPEND" ? "HOST_LISTING_ADMIN_SUSPENDED" : "HOST_LISTING_ADMIN_REINSTATED",
+      targetType: "HostListing", targetId: listingId,
+      requestId: randomBytes(12).toString("hex"),
+      metadata: { previousStatus: existing.status, newStatus: nextStatus }
+    }});
+    return { listing };
+  });
+
   app.get("/api/v1/admin/invites", async (request, reply) => {
     const actor = await requireAdmin(request, reply);
     if (!actor) return;
