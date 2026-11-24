@@ -1,6 +1,19 @@
 import type { FastifyInstance } from "fastify";
+import { prisma } from "@salts/database/client";
+import { currentUser } from "./auth.js";
 
 export async function registerPlatformRoutes(app: FastifyInstance) {
+  app.get("/api/v1/brokers/connections", async (request, reply) => {
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    const connections = await prisma.brokerConnection.findMany({
+      where: { userId: actor.id },
+      select: { id: true, market: true, provider: true, label: true, status: true, lastHealthAt: true, tokenExpiresAt: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    });
+    return { connections };
+  });
+
   app.get("/api/v1/markets", async () => ({
     markets: [
       { id: "INDIA", label: "India", status: "PAPER_ONLY", liveEnabled: false },
