@@ -75,8 +75,15 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     if (!user || user.status !== "ACTIVE" || !(await argon2.verify(user.passwordHash, body.password))) {
       return reply.code(401).send({ error: "Invalid email or password." });
     }
-    await createSession(user.id, reply);
-    return { user: { id: user.id, email: user.email, displayName: user.displayName, roles: user.roles } };
+    let mfaVerifiedAt: Date | null = null;
+    if (user.totpEnabled) {
+      if (!body.totpCode || !user.totpSecretEncrypted || !verifyTotp(decryptTotpSecret(user.totpSecretEncrypted), body.totpCode)) {
+        return reply.code(401).send({ error: "A valid authenticator code is required." });
+      }
+      mfaVerifiedAt = new Date();
+    }
+    await createSession(user.id, reply, mfaVerifiedAt);
+    return { user: { id: user.id, email: user.email, displayName: user.displayName, roles: user.roles, totpEnabled: user.totpEnabled } };
   });
 
   app.post("/api/v1/auth/logout", async (request, reply) => {
@@ -141,10 +148,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     await prisma.session.update({ where: { id: actor.sessionId }, data: { mfaVerifiedAt: verifiedAt } });
     return { ok: true, mfaVerifiedAt: verifiedAt };
   });
-\n  app.get("/api/v1/auth/me", async (request, reply) => {
+
+  app.get("/api/v1/auth/me", async (request, reply) => {
     const user = await currentUser(request);
     if (!user) return reply.code(401).send({ error: "Authentication required." });
-    return { user };
+    return { user: { id: user.id, email: user.email, displayName: user.displayName, roles: user.roles, totpEnabled: user.totpEnabled } };
   });
 
   app.post("/api/v1/admin/invites", {
