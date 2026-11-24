@@ -7,6 +7,7 @@ Branch: `phase1-foundation`
 - Fastify API now registers authentication, host listing and subscriber subscription route modules.
 - Invite-only account creation: one-time invite tokens are generated with 256-bit entropy; only SHA-256 token hashes are stored. Invite redemption claims the token once inside a serializable transaction and creates a subscriber account with an Argon2id password hash.
 - Login/logout/me endpoints use opaque random session tokens. Only token hashes are persisted. Session records are revocable and expire after 12 hours. Session cookie is HttpOnly, SameSite=Strict, scoped to the API path, and Secure in production.
+- TOTP MFA enrollment, encrypted secret storage (AES-256-GCM), authenticator verification, MFA login challenge and 10-minute admin step-up verification are implemented. The encryption key is supplied through `MFA_ENCRYPTION_KEY` and must be kept in a production secret manager.
 - Login, invite redemption and invite issuance have per-route rate limits. Mutating auth/admin routes require exact `APP_ORIGIN` match.
 - Admin invite issuance requires ADMIN role and MFA enrollment. Until MFA enrollment is implemented, this endpoint intentionally refuses administrator invite creation.
 - Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication.
@@ -19,12 +20,13 @@ Branch: `phase1-foundation`
 
 - `DATABASE_URL`: PostgreSQL connection string.
 - `APP_ORIGIN`: exact browser origin (scheme + host + optional port), required for login, invite redemption, logout and admin invite issuance.
+- `MFA_ENCRYPTION_KEY`: base64-encoded 32-byte AES key; generate a unique key and keep it in a secret manager. Never commit it.
 - `NODE_ENV=production` enables Secure on the session cookie.
 - Admin bootstrap requires the one-time variables documented in [ADMIN_BOOTSTRAP.md](./ADMIN_BOOTSTRAP.md).
 
 ## Not yet complete
 
-- MFA/TOTP enrollment and challenge, recent re-authentication for admin actions.
+- Recent MFA re-authentication can be further improved with a dedicated short-lived step-up challenge endpoint and session revocation management.
 - Admin UI, user/role approval APIs, invite revoke/list APIs, and host application workflow.
 - Broker connection wizard and KMS-backed broker credential encryption.
 - Database migrations, production deployment, operational secrets wiring and automated integration tests against PostgreSQL.
