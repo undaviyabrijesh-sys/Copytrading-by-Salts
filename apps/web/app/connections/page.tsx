@@ -67,7 +67,16 @@ export default function ConnectionsPage() {
   async function loadConnections() {
     try { const response=await fetch("/api/v1/brokers/connections",{credentials:"include"}); if(response.ok){const data=await response.json();setConnections(data.connections ?? []);} } catch { /* Account list remains unavailable until API recovers. */ }
   }
-  useEffect(()=>{void loadConnections();},[]);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const oauth=params.get("oauth");
+    if(oauth) {
+      const messages:Record<string,string>={connected:"Broker login completed and account identity verified. Trading permissions remain separately gated.",denied:"Broker login was cancelled or denied.",invalid_callback:"Broker returned an incomplete or invalid login callback.",expired_or_replayed:"This login attempt expired or was already used. Start a new broker login.",connection_missing:"The linked broker connection no longer exists.",failed:"Broker login or profile verification failed. Review the broker account and try again."};
+      setConnectionMessage(messages[oauth] ?? "Broker login could not be completed.");
+      window.history.replaceState({}, "", "/connections");
+    }
+    void loadConnections();
+  },[]);
   async function removeConnection(id:string) {
     const response=await fetch(`/api/v1/brokers/connections/${id}`,{method:"DELETE",credentials:"include",headers:{"content-type":"application/json"}});
     const data=await response.json().catch(()=>({}));
