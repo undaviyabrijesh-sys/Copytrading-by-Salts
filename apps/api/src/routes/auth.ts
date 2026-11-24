@@ -182,6 +182,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     await prisma.auditEvent.create({
       data: { actorId: actor.id, action: "INVITE_CREATED", targetType: "Invite", targetId: invite.id, requestId: randomBytes(12).toString("hex") }
     });
+    reply.header("cache-control", "no-store");
     return reply.code(201).send({ invite: { ...invite, token: issued.token } });
   });
 
