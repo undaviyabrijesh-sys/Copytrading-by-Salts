@@ -7,10 +7,21 @@ export type CredentialProvider = {
   fields: CredentialField[];
   docsUrl: string;
   connectEnabled: boolean;
+  authenticationImplemented: boolean;
+  accountVerificationImplemented: boolean;
+  executionReady: boolean;
   note: string;
 };
 
 const field = (key: string, label: string): CredentialField => ({ key, label, secret: true });
+
+// Keep credential intake, account authentication and order execution as separate
+// product states. No broker is execution-ready until its full adapter acceptance suite passes.
+const providerReadiness = (id: string) => ({
+  authenticationImplemented: ["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE", "FIVE_PAISA", "GROWW", "DELTA_INDIA"].includes(id),
+  accountVerificationImplemented: ["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE", "FIVE_PAISA", "GROWW", "DELTA_INDIA"].includes(id),
+  executionReady: false
+});
 
 // These are only the static application credentials documented by each provider.
 // User login, OTP/TOTP, PIN/MPIN and redirect-returned tokens belong in a
@@ -34,9 +45,9 @@ function providerCredentialFields(id: string): CredentialField[] {
 }
 
 export const credentialProviders: CredentialProvider[] = [
-  { id: "DHAN", label: "DhanHQ", market: "INDIA", auth: "OAUTH", fields: providerCredentialFields("DHAN"), docsUrl: "https://dhanhq.co/docs/v2/authentication/", connectEnabled: true, note: "Dhan client ID plus API key/secret starts the individual consent flow; the user authenticates on Dhan and returns a one-time tokenId for server-side access-token exchange. Manual 24-hour token entry is a separate fallback, not the preferred platform flow." },
-  { id: "GROWW", label: "Groww Trade API", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "Groww Trading API access token", secret: true }], docsUrl: "https://groww.in/trade-api/docs", connectEnabled: true, note: "Token-only connection. Daily expiry applies; account and order permissions remain unverified." },
-  { id: "DELTA_INDIA", label: "Delta Exchange India", market: "CRYPTO", auth: "API_KEY_SECRET", fields: [{ key: "apiKey", label: "API key", secret: true }, { key: "apiSecret", label: "API secret", secret: true }], docsUrl: "https://docs.delta.exchange/", connectEnabled: true, note: "Use India production credentials, IP allowlisting and no withdrawal permission. Connection remains pending until signed health checks are implemented." },
+  { ...providerReadiness("DHAN"), id: "DHAN", label: "DhanHQ", market: "INDIA", auth: "OAUTH", fields: providerCredentialFields("DHAN"), docsUrl: "https://dhanhq.co/docs/v2/authentication/", connectEnabled: true, note: "Dhan client ID plus API key/secret starts the individual consent flow; the user authenticates on Dhan and returns a one-time tokenId for server-side access-token exchange. Manual 24-hour token entry is a separate fallback, not the preferred platform flow." },
+  { ...providerReadiness("GROWW"), id: "GROWW", label: "Groww Trade API", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "Groww Trading API access token", secret: true }], docsUrl: "https://groww.in/trade-api/docs", connectEnabled: true, note: "Token-only connection. Daily expiry applies; account and order permissions remain unverified." },
+  { ...providerReadiness("DELTA_INDIA"), id: "DELTA_INDIA", label: "Delta Exchange India", market: "CRYPTO", auth: "API_KEY_SECRET", fields: [{ key: "apiKey", label: "API key", secret: true }, { key: "apiSecret", label: "API secret", secret: true }], docsUrl: "https://docs.delta.exchange/", connectEnabled: true, note: "Use India production credentials, IP allowlisting and no withdrawal permission. Connection remains pending until signed health checks are implemented." },
   ...([
     ["ZERODHA", "Zerodha Kite Connect", "https://kite.trade/docs/connect/v3/"],
     ["ANGEL_ONE", "Angel One SmartAPI", "https://smartapi.angelone.in/docs"],
@@ -49,7 +60,7 @@ export const credentialProviders: CredentialProvider[] = [
     ["KOTAK_NEO", "Kotak Neo", "https://www.kotakneo.com/"],
     ["ALICE_BLUE", "Alice Blue ANT", "https://ant.aliceblueonline.com/productdocumentation/"]
   ] as const).map(([id, label, docsUrl]) => ({
-    id, label, market: "INDIA" as const, auth: "OAUTH" as const,
+    ...providerReadiness(id), id, label, market: "INDIA" as const, auth: "OAUTH" as const,
     fields: providerCredentialFields(id),
     docsUrl, connectEnabled: providerCredentialFields(id).length > 0,
     note: providerCredentialFields(id).length > 0
@@ -86,7 +97,7 @@ export const credentialProviders: CredentialProvider[] = [
     ["GOODWILL", "Goodwill Wealth Management", "https://www.gwcindia.in/"],
     ["ARROW", "Arrow", "https://arrowtrading.in/"]
   ] as const).map(([id, label, docsUrl]) => ({
-    id, label, market: "INDIA" as const, auth: "OAUTH" as const,
+    ...providerReadiness(id), id, label, market: "INDIA" as const, auth: "OAUTH" as const,
     fields: [], docsUrl, connectEnabled: false,
     note: "Catalogue/research entry only. Credential intake and connection are disabled until official API availability, authentication fields, account eligibility and third-party platform permissions are verified."
   }))
