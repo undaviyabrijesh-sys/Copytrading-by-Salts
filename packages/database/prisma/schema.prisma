@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus { INVITED ACTIVE SUSPENDED DELETED }
+enum UserRole { SUBSCRIBER HOST ADMIN }
+enum Market { INDIA CRYPTO }
+enum ConnectionStatus { PENDING CONNECTED ERROR DISCONNECTED REAUTH_REQUIRED }
+enum TradingMode { PAPER LIVE }
+enum ListingStatus { DRAFT PUBLISHED PAUSED REMOVED SUSPENDED }
+enum SubscriptionStatus { ACTIVE PAUSED UNSUBSCRIBED }
+enum CopyOrderStatus { QUEUED SKIPPED SUBMITTED ACKNOWLEDGED PARTIALLY_FILLED FILLED CANCELLED REJECTED UNKNOWN }
+enum SignalEventType { ENTRY EXIT PARTIAL_EXIT MODIFY_ORDER CANCEL PLACE_STOP_LOSS MODIFY_STOP_LOSS CANCEL_STOP_LOSS PLACE_TAKE_PROFIT MODIFY_TAKE_PROFIT CANCEL_TAKE_PROFIT TRAIL_STOP SQUARE_OFF }
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  displayName     String
+  status          UserStatus @default(INVITED)
+  roles           UserRole[] @default([SUBSCRIBER])
+  totpEnabled     Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  connections     BrokerConnection[]
+  listings        HostListing[]
+  subscriptions   HostSubscription[]
+  acceptances     DisclosureAcceptance[]
+  invitesCreated Invite[] @relation("InviteCreator")
+  auditEvents     AuditEvent[] @relation("AuditActor")
+}
+
+model Invite {
+  id          String @id @default(cuid())
+  tokenHash   String @unique
+  createdById String
+  createdBy   User @relation("InviteCreator", fields: [createdById], references: [id])
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model DisclosureVersion {
+  id          String @id @default(cuid())
+  market      Market?
+  version     String
+  contentHash String
+  body        String
+  publishedAt DateTime @default(now())
+  acceptances DisclosureAcceptance[]
+  @@unique([market, version])
+}
+
+model DisclosureAcceptance {
+  id          String @id @default(cuid())
+  userId      String
+  versionId   String
+  acceptedAt  DateTime @default(now())
+  ipAddress   String
+  userAgent   String
+  user        User @relation(fields: [userId], references: [id])
+  version     DisclosureVersion @relation(fields: [versionId], references: [id])
+  @@unique([userId, versionId])
+}
+
+model BrokerConnection {
+  id              String @id @default(cuid())
+  userId          String
+  market          Market
+  provider        String
+  label           String
+  encryptedSecret Bytes
+  keyFingerprint  String
+  permissions     Json
+  status          ConnectionStatus @default(PENDING)
+  lastHealthAt    DateTime?
+  tokenExpiresAt  DateTime?
+  egressProfileId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User @relation(fields: [userId], references: [id])
+  @@index([userId, market])
+}
+
+model HostListing {
+  id              String @id @default(cuid())
+  hostUserId      String
+  market          Market
+  title           String
+  description     String
+  riskDisclosure  String
+  status          ListingStatus @default(DRAFT)
+  publishedAt     DateTime?
+  updatedAt       DateTime @updatedAt
+  host            User @relation(fields: [hostUserId], references: [id])
+  subscriptions   HostSubscription[]
+  @@index([market, status])
+}
+
+model HostSubscription {
+  id          String @id @default(cuid())
+  hostUserId  String
+  subscriberId String
+  listingId   String
+  market      Market
+  status      SubscriptionStatus @default(ACTIVE)
+  mode        TradingMode @default(PAPER)
+  settings    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  host        User @relation(fields: [hostUserId], references: [id])
+  subscriber  User @relation(fields: [subscriberId], references: [id])
+  listing     HostListing @relation(fields: [listingId], references: [id])
+  @@unique([subscriberId, listingId])
+  @@index([subscriberId, market, status])
+}
+
+model Signal {
+  id              String @id @default(cuid())
+  idempotencyKey  String @unique
+  hostUserId      String
+  hostConnectionId String
+  market          Market
+  event           SignalEventType
+  instrument      Json
+  payload         Json
+  occurredAt      DateTime
+  receivedAt      DateTime @default(now())
+  copyOrders      CopyOrder[]
+  @@index([hostUserId, market, occurredAt])
+}
+
+model CopyOrder {
+  id              String @id @default(cuid())
+  signalId        String
+  subscriberId    String
+  connectionId    String
+  clientOrderId   String @unique
+  brokerOrderId   String?
+  status          CopyOrderStatus @default(QUEUED)
+  requestedQty    Decimal @db.Decimal(28, 10)
+  filledQty       Decimal @default(0) @db.Decimal(28, 10)
+  averageFill     Decimal? @db.Decimal(28, 10)
+  failureCode     String?
+  failureMessage  String?
+  latencyMs       Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  signal          Signal @relation(fields: [signalId], references: [id])
+  @@unique([signalId, subscriberId, connectionId])
+  @@index([subscriberId, status, createdAt])
+}
+
+model AuditEvent {
+  id          String @id @default(cuid())
+  actorId     String?
+  tenantId    String?
+  action      String
+  targetType  String
+  targetId    String
+  requestId   String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User? @relation("AuditActor", fields: [actorId], references: [id])
+  @@index([tenantId, createdAt])
+}
