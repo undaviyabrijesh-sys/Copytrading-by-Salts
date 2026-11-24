@@ -51,8 +51,10 @@ export const credentialProviders: CredentialProvider[] = [
   ] as const).map(([id, label, docsUrl]) => ({
     id, label, market: "INDIA" as const, auth: "OAUTH" as const,
     fields: providerCredentialFields(id),
-    docsUrl, connectEnabled: true,
-    note: "Secure intake of the listed static app credentials only. This does not authenticate an account. Broker-hosted login, callback handling, identity and permissions must be implemented and verified separately."
+    docsUrl, connectEnabled: providerCredentialFields(id).length > 0,
+    note: providerCredentialFields(id).length > 0
+      ? "Secure intake of the listed static app credentials only. This does not authenticate an account. Broker-hosted login, callback handling, identity and permissions must be implemented and verified separately."
+      : "Catalogue/research entry only. Credential intake is disabled until official API availability, exact authentication fields and third-party platform permissions are verified."
   })),
   ...([
     ["IIFL", "IIFL Securities", "https://www.iiflcapital.com/"],
@@ -85,14 +87,7 @@ export const credentialProviders: CredentialProvider[] = [
     ["ARROW", "Arrow", "https://arrowtrading.in/"]
   ] as const).map(([id, label, docsUrl]) => ({
     id, label, market: "INDIA" as const, auth: "OAUTH" as const,
-    fields: [
-      { key: "clientId", label: "Broker app / client ID", secret: true },
-      { key: "clientSecret", label: "Broker app / client secret", secret: true },
-      { key: "apiKey", label: "Broker-issued API key", secret: true },
-      { key: "apiSecret", label: "Broker-issued API secret", secret: true },
-      { key: "accessToken", label: "Broker-issued access token", secret: true }
-    ],
-    docsUrl, connectEnabled: true,
-    note: "Secure credential intake only. This does not confirm API availability or enable connection/trading. Provider authentication, API access, account verification, permissions, market segments and order lifecycle must be verified first."
+    fields: [], docsUrl, connectEnabled: false,
+    note: "Catalogue/research entry only. Credential intake and connection are disabled until official API availability, authentication fields, account eligibility and third-party platform permissions are verified."
   }))
 ];
