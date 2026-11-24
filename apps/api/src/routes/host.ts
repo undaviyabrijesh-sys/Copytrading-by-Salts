@@ -41,6 +41,7 @@ export async function registerHostRoutes(app: FastifyInstance) {
       }
     } }
   }, async (request, reply) => {
+    assertTrustedOrigin(request);
     const actor = await actorFor(request, reply);
     if (!actor) return;
     const body = request.body as { market: unknown; title: string; description: string; riskDisclosure: string };
@@ -70,6 +71,7 @@ export async function registerHostRoutes(app: FastifyInstance) {
       minProperties: 1
     } }
   }, async (request, reply) => {
+    assertTrustedOrigin(request);
     const actor = await actorFor(request, reply);
     if (!actor) return;
     const { listingId } = request.params as { listingId: string };
@@ -90,6 +92,7 @@ export async function registerHostRoutes(app: FastifyInstance) {
   });
 
   app.delete("/api/v1/host/listings/:listingId", async (request, reply) => {
+    assertTrustedOrigin(request);
     const actor = await actorFor(request, reply);
     if (!actor) return;
     const { listingId } = request.params as { listingId: string };
