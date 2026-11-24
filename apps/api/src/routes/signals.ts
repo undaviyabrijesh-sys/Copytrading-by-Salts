@@ -94,6 +94,22 @@ export async function registerSignalRoutes(app: FastifyInstance) {
       typeof body.payload.quantity !== "string")) {
       return reply.code(400).send({ error: "Entry signals require normalized side, orderType and quantity fields." });
     }
+    if (body.event === "ENTRY" && ["LIMIT", "STOP_LIMIT"].includes(String(body.payload.orderType)) && typeof body.payload.limitPrice !== "string") {
+      return reply.code(400).send({ error: "Limit-based entry signals require limitPrice." });
+    }
+    if (body.event === "ENTRY" && ["STOP_LIMIT", "STOP_MARKET"].includes(String(body.payload.orderType)) && typeof body.payload.triggerPrice !== "string") {
+      return reply.code(400).send({ error: "Stop entry signals require triggerPrice." });
+    }
+    if (body.event === "PARTIAL_EXIT" && typeof body.payload.quantity !== "string") {
+      return reply.code(400).send({ error: "Partial-exit signals require an explicit quantity." });
+    }
+    const targetRequired = ["MODIFY_ORDER", "CANCEL", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP"];
+    if (targetRequired.includes(body.event) && typeof body.payload.targetOrderId !== "string") {
+      return reply.code(400).send({ error: "This order-management event requires targetOrderId." });
+    }
+    if (["PLACE_STOP_LOSS", "MODIFY_STOP_LOSS", "PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(body.event) && typeof body.payload.triggerPrice !== "string") {
+      return reply.code(400).send({ error: "Stop and take-profit events require triggerPrice." });
+    }
     const connection = await prisma.brokerConnection.findFirst({
       where: { id: body.hostConnectionId, userId: actor.id, market: body.market, status: "CONNECTED" },
       select: { id: true }
