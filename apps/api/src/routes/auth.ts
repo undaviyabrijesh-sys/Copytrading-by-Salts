@@ -8,7 +8,7 @@ import { decryptTotpSecret, newTotpSecret, totpProvisioningUri, verifyTotp } fro
 const SESSION_COOKIE = "salts_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-type SafeUser = { id: string; email: string; displayName: string; roles: string[]; totpEnabled: boolean; sessionId: string; mfaVerifiedAt: Date | null };
+type SafeUser = { id: string; email: string; displayName: string; status: "ACTIVE"; roles: string[]; totpEnabled: boolean; sessionId: string; mfaVerifiedAt: Date | null };
 
 function cookieValue(header: string | undefined, name: string): string | null {
   if (!header) return null;
@@ -47,7 +47,7 @@ export async function currentUser(request: FastifyRequest): Promise<SafeUser | n
   try { tokenHash = hashOpaqueToken(token); } catch { return null; }
   const session = await prisma.session.findFirst({
     where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() }, user: { status: "ACTIVE" } },
-    select: { id: true, mfaVerifiedAt: true, user: { select: { id: true, email: true, displayName: true, roles: true, totpEnabled: true } } }
+    select: { id: true, mfaVerifiedAt: true, user: { select: { id: true, email: true, displayName: true, status: true, roles: true, totpEnabled: true } } }
   });
   if (!session) return null;
   void prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
