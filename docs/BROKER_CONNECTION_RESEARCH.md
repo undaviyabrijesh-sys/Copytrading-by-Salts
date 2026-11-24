@@ -106,8 +106,43 @@ Only the third state may be considered an eligible adapter, and only after the p
 The connection catalogue UI is a research/education surface only. It does not submit credentials, create connections, perform OAuth callbacks, encrypt API secrets or place orders. Existing connection records and the marketplace destination selector are foundations only. No provider is production-ready until its adapter and test evidence are complete.
 
 
-## Credential intake forms
+## Credential intake forms — reviewed status
 
-The connection page now exposes an encrypted credential-intake form for every listed broker/provider. For providers with a reviewed token/key schema (DhanHQ, Groww Trade API and Delta Exchange India), the form uses those specific fields. For other catalogue entries, the form accepts only a restricted set of possible broker-issued API/app values: client ID, client secret, API key, API secret and access token. Users leave irrelevant fields blank.
+The earlier generic five-field form was not sufficient to connect brokers and could mislead users into entering the wrong credential type. It has been replaced with provider-specific static application-credential fields for the currently documented providers:
 
-This is **not** a generic broker login and must never collect trading passwords, PINs, TOTP seeds, recovery codes or withdrawal credentials. Submission is authenticated, requires recent MFA, is rate-limited, and is encrypted with AWS KMS before persistence. If KMS is unavailable, the API rejects the submission and stores nothing. Saved records stay PENDING: there is no claim that a broker authenticated, that the values are valid, or that trading/copy execution is enabled. Provider-specific OAuth, identity, permission, static-IP, segment and order-lifecycle validation remains mandatory.
+| Provider | Static credential fields collected by the form | Authentication still required after saving |
+|---|---|---|
+| Zerodha Kite Connect | API key, API secret | Broker-hosted Kite login, short-lived request-token callback, server-side checksum exchange, profile/scope verification |
+| Angel One SmartAPI | SmartAPI app API key | Broker-hosted publisher login/callback or approved login flow; account identity and token verification. PIN/TOTP are not collected in the form |
+| Upstox | Client ID, client secret | OAuth authorization-code redirect, exact redirect URI, one-time code exchange, identity/scope verification |
+| FYERS | App ID, app secret | Approved third-party/common-app OAuth flow, state validation, auth-code exchange; an individual app cannot authenticate other FYERS users |
+| Shoonya | Client ID, secret code | Broker-hosted OAuth authorization, IP whitelist prerequisite, one-time code/checksum exchange; no password/TOTP collection |
+| Flattrade | API key, API secret | Broker-hosted authorization, redirect/request-token exchange, session verification |
+| 5paisa Xstream | App key, encryption key | OAuth login, request-token exchange, user ID and daily access-token handling |
+| ICICI Direct Breeze | App key, secret key | Broker-hosted OAuth login, API_Session → CustomerDetails session-token exchange, registered static IP and supported order-type checks |
+| Alice Blue ANT | App code, API secret | Broker-hosted login, authCode + userId callback, server-side checksum/session exchange |
+| DhanHQ | Access token | Validate token/profile, account-specific static IP and order permission; partner onboarding is separate |
+| Groww Trade API | Access token | Validate token/profile, daily expiry and CASH/FNO entitlement |
+| Delta Exchange India | API key, API secret | Signed REST/private WebSocket health checks, account identity, key permissions and IP allowlist |
+
+The UI submits only non-empty values for the selected provider. It no longer sends blank placeholders for unused fields. Kotak Neo and the additional research-queue brokers have no credential form; their entries remain unavailable until their current official API and platform permission requirements are verified. The backend rejects credential intake for those research-only providers.
+
+These fields are **not a connection wizard**. Saving static application credentials only creates a tenant-owned PENDING record. The provider-hosted authorization/callback, account identity, permission and health-check implementations are not yet built. No provider is CONNECTED or execution-ready based on this form. The API vault requires AWS KMS configuration; no KMS key or IAM role has been provisioned, so credential submission will currently fail closed with no credential stored.
+
+Security boundary: never ask users to paste broker passwords, PIN/MPIN, TOTP seeds, recovery codes or withdrawal credentials into these static fields. Where a broker requires a user challenge, implement an approved broker-hosted or explicitly ephemeral one-time flow and discard the challenge immediately. Never persist a user's reusable login factors as general API credentials.
+
+Research evidence reviewed against official provider documentation includes:
+- Zerodha Kite login/request-token/checksum flow: https://www.kite.trade/docs/connect/v3/user/
+- Angel One SmartAPI publisher login and client-code/PIN/TOTP login requirements: https://smartapi.angelone.in/docs
+- Upstox OAuth authorization-code flow: https://upstox.com/developer/api-documentation/authentication/
+- FYERS third-party app OAuth and common-app approval: https://fyers.in/api-docs/v3/api/authentication/third-party-app/
+- Shoonya OAuth, IP whitelist and 24-hour access token: https://www.shoonya.com/api-documentation/auth-overview
+- Flattrade Pi app key/secret and redirect token flow: https://pi.flattrade.in/docs
+- 5paisa request-token and encryption-key access-token flow: https://xstream.5paisa.com/dev-docs/docFundamentals/integration-flow
+- ICICI Breeze OAuth, session-token exchange, static IP and order restrictions: https://api.icicidirect.com/breezeapi/documents/index.html
+- Alice Blue appCode/apiSecret and authCode/userId flow: https://ant.aliceblueonline.com/productdocumentation/Authentication/
+- DhanHQ access token and individual static-IP requirements: https://dhanhq.co/docs/v2/authentication/
+- Groww daily access token and CASH/FNO-only entitlement: https://groww.in/trade-api/docs/curl
+- Delta API key/secret and trading-key IP allowlisting: https://docs.delta.exchange/
+
+The broker catalogue, credential intake, verified account connection and validated copy execution remain separate product states. A form being visible must never imply broker support or permission to copy trades.
