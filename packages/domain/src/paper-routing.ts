@@ -45,6 +45,37 @@ export interface PaperDestinationContext {
   linkedPositionExists: boolean;
 }
 
+function decimalParts(value: string): { coefficient: bigint; scale: number } | null {
+  if (!/^\\d+(?:\\.\\d+)?$/.test(value)) return null;
+  const [whole, fraction = ""] = value.split(".");
+  return { coefficient: BigInt(whole + fraction), scale: fraction.length };
+}
+
+function formatDecimal(coefficient: bigint, scale: number): string {
+  const negative = coefficient < 0n;
+  let digits = (negative ? -coefficient : coefficient).toString().padStart(scale + 1, "0");
+  if (scale > 0) {
+    digits = digits.slice(0, -scale) + "." + digits.slice(-scale);
+    digits = digits.replace(/\\.?0+$/, "");
+  }
+  return (negative ? "-" : "") + digits;
+}
+
+function multiplyDecimals(left: string, right: string): string | null {
+  const a = decimalParts(left), b = decimalParts(right);
+  if (!a || !b) return null;
+  return formatDecimal(a.coefficient * b.coefficient, a.scale + b.scale);
+}
+
+function compareDecimals(left: string, right: string): number | null {
+  const a = decimalParts(left), b = decimalParts(right);
+  if (!a || !b) return null;
+  const scale = Math.max(a.scale, b.scale);
+  const av = a.coefficient * 10n ** BigInt(scale - a.scale);
+  const bv = b.coefficient * 10n ** BigInt(scale - b.scale);
+  return av < bv ? -1 : av > bv ? 1 : 0;
+}
+
 export type PaperRoutingDecision =
   | { eligible: true; event: SignalEventType; quantity?: string; instrument?: CanonicalInstrument; managementOnly: boolean }
   | { eligible: false; code: string; reason: string };
@@ -100,19 +131,21 @@ export function evaluatePaperRouting(input: {
   if (sub.settings.maxDailyLoss !== undefined && dest.dailyLoss >= sub.settings.maxDailyLoss) {
     return { eligible: false, code: "DAILY_LOSS_LIMIT", reason: "Subscriber daily loss limit has been reached; new entries are blocked." };
   }
-  const multiplier = sub.settings.quantityMultiplier ?? 1;
-  const rawQuantity = Number(signal.quantity);
-  const scaledQuantity = rawQuantity * multiplier;
-  if (!Number.isFinite(multiplier) || multiplier <= 0 || !Number.isFinite(rawQuantity) || rawQuantity <= 0 || !Number.isFinite(scaledQuantity) || scaledQuantity <= 0) {
+  const multiplier = String(sub.settings.quantityMultiplier ?? 1);
+  const sourceQuantity = signal.quantity ?? "";
+  const quantity = multiplyDecimals(sourceQuantity, multiplier);
+  if (!quantity || compareDecimals(sourceQuantity, "0") === null || compareDecimals(sourceQuantity, "0")! <= 0 || compareDecimals(multiplier, "0") === null || compareDecimals(multiplier, "0")! <= 0 || compareDecimals(quantity, "0")! <= 0) {
     return { eligible: false, code: "INVALID_SIZING", reason: "Subscriber sizing multiplier or source quantity is invalid." };
   }
-  if (sub.settings.maxQuantity !== undefined && scaledQuantity > sub.settings.maxQuantity) {
+  if (sub.settings.maxQuantity !== undefined && compareDecimals(quantity, String(sub.settings.maxQuantity))! > 0) {
     return { eligible: false, code: "MAX_QUANTITY", reason: "Calculated quantity exceeds the subscriber maximum quantity." };
   }
-  const quantity = String(Number(scaledQuantity.toFixed(10)));
-  const price = Number(signal.price);
-  if (!Number.isFinite(price) || price <= 0) return { eligible: false, code: "PRICE_REQUIRED", reason: "A valid reference price is required to enforce the subscriber order-value cap." };
-  if (sub.settings.maxOrderValue !== undefined && scaledQuantity * price > sub.settings.maxOrderValue) {
+  const price = signal.price ?? "";
+  const orderValue = multiplyDecimals(quantity, price);
+  if (!orderValue || compareDecimals(price, "0") === null || compareDecimals(price, "0")! <= 0) {
+    return { eligible: false, code: "PRICE_REQUIRED", reason: "A valid reference price is required to enforce the subscriber order-value cap." };
+  }
+  if (sub.settings.maxOrderValue !== undefined && compareDecimals(orderValue, String(sub.settings.maxOrderValue))! > 0) {
     return { eligible: false, code: "MAX_ORDER_VALUE", reason: "Calculated order value exceeds the subscriber maximum." };
   }
   const copy = evaluateCopyRequest({
