@@ -93,7 +93,7 @@ export default function ConnectionsPage() {
     UPSTOX:["clientId","clientSecret"], FYERS:["clientId","clientSecret"],
     SHOONYA:["clientId","clientSecret"], FLATTRADE:["apiKey","apiSecret"],
     FIVE_PAISA:["clientId","clientSecret"], ICICI_BREEZE:["apiKey","apiSecret"],
-    ALICE_BLUE:["clientId","apiSecret"], DHAN:["apiKey","apiSecret"],
+    ALICE_BLUE:["clientId","apiSecret"], DHAN:["clientId","apiKey","apiSecret"],
     GROWW:["accessToken"], DELTA_INDIA:["apiKey","apiSecret"]
   };
   const credentialKeys = !broker || broker.status !== "DOCUMENTED" ? [] : (credentialDefinitions[broker.id] ?? []);
@@ -109,7 +109,7 @@ export default function ConnectionsPage() {
     FIVE_PAISA:{clientId:"5paisa app key (app_key)",clientSecret:"5paisa encryption key (encryption_key)"},
     ICICI_BREEZE:{apiKey:"Breeze API app key (api_key)",apiSecret:"Breeze API secret key (api_secret)"},
     ALICE_BLUE:{clientId:"Alice Blue app code (appCode)",apiSecret:"Alice Blue API secret (apiSecret)"},
-    DHAN:{apiKey:"DhanHQ API key (api-key)",apiSecret:"DhanHQ API secret (api-secret)"},
+    DHAN:{clientId:"Dhan client ID (client_id)",apiKey:"DhanHQ API key (app_id)",apiSecret:"DhanHQ API secret (app_secret)"},
     GROWW:{accessToken:"Groww Trading API access token (access_token)"},
     DELTA_INDIA:{apiKey:"Delta Exchange API key (api_key)",apiSecret:"Delta Exchange API secret (api_secret)"}
   };
