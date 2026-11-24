@@ -26,7 +26,7 @@ function providerCredentialFields(id: string): CredentialField[] {
     FIVE_PAISA: [field("clientId", "5paisa app key"), field("clientSecret", "5paisa encryption key")],
     ICICI_BREEZE: [field("apiKey", "Breeze app key"), field("apiSecret", "Breeze secret key")],
     ALICE_BLUE: [field("clientId", "Alice Blue app code"), field("apiSecret", "Alice Blue API secret")],
-    DHAN: [field("accessToken", "DhanHQ access token")],
+    DHAN: [field("apiKey", "DhanHQ API key"), field("apiSecret", "DhanHQ API secret")],
     GROWW: [field("accessToken", "Groww Trading API access token")],
     DELTA_INDIA: [field("apiKey", "Delta API key"), field("apiSecret", "Delta API secret")]
   };
@@ -34,7 +34,7 @@ function providerCredentialFields(id: string): CredentialField[] {
 }
 
 export const credentialProviders: CredentialProvider[] = [
-  { id: "DHAN", label: "DhanHQ", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "DhanHQ access token", secret: true }], docsUrl: "https://dhanhq.co/docs/v2/authentication/", connectEnabled: true, note: "Token-only connection. Order permission and static-IP eligibility are not verified until a provider health check is implemented." },
+  { id: "DHAN", label: "DhanHQ", market: "INDIA", auth: "OAUTH", fields: providerCredentialFields("DHAN"), docsUrl: "https://dhanhq.co/docs/v2/authentication/", connectEnabled: true, note: "API key/secret starts Dhan's consent flow; the user authenticates on Dhan and returns a one-time tokenId for server-side access-token exchange. Manual 24-hour token entry is a separate fallback, not the preferred platform flow." },
   { id: "GROWW", label: "Groww Trade API", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "Groww Trading API access token", secret: true }], docsUrl: "https://groww.in/trade-api/docs", connectEnabled: true, note: "Token-only connection. Daily expiry applies; account and order permissions remain unverified." },
   { id: "DELTA_INDIA", label: "Delta Exchange India", market: "CRYPTO", auth: "API_KEY_SECRET", fields: [{ key: "apiKey", label: "API key", secret: true }, { key: "apiSecret", label: "API secret", secret: true }], docsUrl: "https://docs.delta.exchange/", connectEnabled: true, note: "Use India production credentials, IP allowlisting and no withdrawal permission. Connection remains pending until signed health checks are implemented." },
   ...([
