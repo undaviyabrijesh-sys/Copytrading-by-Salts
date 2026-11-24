@@ -24,9 +24,9 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/brokers/providers", async () => ({
-    providers: credentialProviders.map(({ id, label, market, auth, fields, docsUrl, connectEnabled, note }) => ({
+    providers: credentialProviders.map(({ id, label, market, auth, fields, docsUrl, connectEnabled, authenticationImplemented, accountVerificationImplemented, executionReady, note }) => ({
       id, label, market, auth, fields: fields.map(({ key, label }) => ({ key, label, type: "password" })),
-      docsUrl, connectEnabled, note
+      docsUrl, connectEnabled, authenticationImplemented, accountVerificationImplemented, executionReady, note
     }))
   }));
 
