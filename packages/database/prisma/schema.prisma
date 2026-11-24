@@ -100,6 +100,7 @@ model User {
   followedSubscriptions HostSubscription[] @relation("SubscriberSubscriptions")
   sessions        Session[]
   copyIntents     CopyIntent[]
+  oauthAttempts   BrokerOAuthAttempt[]
 }
 
 model Invite {
@@ -157,6 +158,7 @@ model BrokerConnection {
   user            User @relation(fields: [userId], references: [id])
   destinationFor HostSubscription[] @relation("SubscriptionDestinationConnection")
   copyIntents CopyIntent[] @relation("IntentDestinationConnection")
+  oauthAttempts BrokerOAuthAttempt[]
   @@index([userId, market])
 }
 
@@ -171,6 +173,8 @@ model BrokerOAuthAttempt {
   usedAt          DateTime?
   createdAt       DateTime @default(now())
   metadata        Json?
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection      BrokerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   @@index([userId, provider, createdAt])
   @@index([connectionId, expiresAt])
   @@index([expiresAt, usedAt])
