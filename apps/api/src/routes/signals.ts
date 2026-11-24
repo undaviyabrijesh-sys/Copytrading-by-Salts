@@ -41,6 +41,7 @@ export async function registerSignalRoutes(app: FastifyInstance) {
 
 
   app.post("/api/v1/host/signals", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
     schema: {
       body: {
         type: "object", additionalProperties: false,
@@ -62,7 +63,17 @@ export async function registerSignalRoutes(app: FastifyInstance) {
               tickSize: { type: "string", minLength: 1, maxLength: 32 }
             }
           },
-          payload: { type: "object", additionalProperties: true },
+          payload: {
+            type: "object", additionalProperties: false,
+            properties: {
+              side: { type: "string", enum: ["BUY", "SELL"] },
+              orderType: { type: "string", enum: ["MARKET", "LIMIT", "STOP_LIMIT", "STOP_MARKET"] },
+              quantity: { type: "string", minLength: 1, maxLength: 32, pattern: "^[0-9]+(\\.[0-9]+)?$" },
+              limitPrice: { type: "string", minLength: 1, maxLength: 32, pattern: "^[0-9]+(\\.[0-9]+)?$" },
+              triggerPrice: { type: "string", minLength: 1, maxLength: 32, pattern: "^[0-9]+(\\.[0-9]+)?$" },
+              targetOrderId: { type: "string", minLength: 1, maxLength: 128 }
+            }
+          },
           occurredAt: { type: "string", format: "date-time" }
         }
       }
@@ -78,6 +89,11 @@ export async function registerSignalRoutes(app: FastifyInstance) {
       payload: Record<string, unknown>; occurredAt: string;
     };
     if (body.instrument.market !== body.market) return reply.code(400).send({ error: "Instrument market must match signal market." });
+    if (body.event === "ENTRY" && (!["BUY", "SELL"].includes(String(body.payload.side)) ||
+      !["MARKET", "LIMIT", "STOP_LIMIT", "STOP_MARKET"].includes(String(body.payload.orderType)) ||
+      typeof body.payload.quantity !== "string")) {
+      return reply.code(400).send({ error: "Entry signals require normalized side, orderType and quantity fields." });
+    }
     const connection = await prisma.brokerConnection.findFirst({
       where: { id: body.hostConnectionId, userId: actor.id, market: body.market, status: "CONNECTED" },
       select: { id: true }
