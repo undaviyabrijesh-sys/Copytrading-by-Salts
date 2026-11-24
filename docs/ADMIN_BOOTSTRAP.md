@@ -34,4 +34,4 @@ Admin status does **not** grant permission to view another user's plaintext brok
 
 ## Current implementation status
 
-The database schema includes revocable sessions stored as token hashes and encrypted TOTP secrets. Invite-only redemption, login/logout, MFA enrollment/challenge and role-guarded admin APIs are implemented in the API branch. Admin UI, database migration, production deployment and end-to-end verification remain pending. The initial admin account cannot be created until a database is provisioned and migrated.
+The database schema includes revocable sessions stored as token hashes and encrypted TOTP secrets. Invite-only redemption, login/logout, MFA enrollment/challenge and role-guarded admin APIs are implemented in the API branch. An initial owner admin console and the initial Prisma migration are committed. The migration has not been applied, and production deployment and end-to-end verification remain pending. The initial admin account cannot be created until a database is provisioned and migrated.
