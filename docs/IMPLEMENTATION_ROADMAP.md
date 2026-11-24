@@ -20,7 +20,7 @@ Product objective: a secure, multi-tenant, cross-broker platform that copies a h
 |---|---|---|---|
 | 0. Foundation and product guardrails | Monorepo, architecture, tenant-owned data model, invite-only auth, MFA, host/listing/subscription foundations, paper-only policy | Schema and core route contracts reviewed; CI can run and report actionable results | Foundation committed; validation still blocked |
 | 1. Broker connection completion | Provider credential contracts; secure broker-hosted auth; one-time callback correlation; token lifecycle; account identity; health/re-auth; provider permission and static-IP evidence | Each enabled provider passes automated contract tests and account-level verification; unverified providers remain visibly unavailable | In progress |
-| 2. Canonical instruments and capability matrix | Normalized exchange/segment/instrument/expiry/strike/lot-size/precision; per-broker order/event capabilities; verified source→destination mappings | Mapping is deterministic, versioned and fail-closed; every supported pair has fixtures and tests | Not started |
+| 2. Canonical instruments and capability matrix | Normalized exchange/segment/instrument/expiry/strike/lot-size/precision; per-broker order/event capabilities; verified source→destination mappings | Mapping is deterministic, versioned and fail-closed; every supported pair has fixtures and tests | Started: strict instrument validation and destination-segment gating committed; mapping registry still pending |
 | 3. Durable copy execution engine | Queue worker, transactional claims, idempotency, retry/backoff, outbox/inbox, per-subscriber evaluation, order submission abstraction | Paper intents progress through durable states; duplicate delivery cannot duplicate orders; crash recovery tested | Not started |
 | 4. Full order lifecycle and reconciliation | Entry/exit/partial exit, modify/cancel, SL/TP/trailing, square-off, partial fills, rejects, reconnect/replay and broker reconciliation | Lifecycle contract tests pass for every enabled adapter; unmatched exposure and unknown states are surfaced safely | Not started |
 | 5. Host/subscriber product completion | Host listings and controls; subscriber discovery/subscription/risk/destination selection; activity and execution history; support/admin operations | End-to-end multi-user workflows pass with isolated tenant data and usable operational visibility | Foundation present; completion pending |
@@ -53,3 +53,15 @@ Product objective: a secure, multi-tenant, cross-broker platform that copies a h
 ## Immediate next deliverable
 
 Complete Phase 1 provider contract alignment and tests before expanding broker count. In parallel, prepare Phase 2's canonical instrument/capability contract, but do not route orders until the provider pair is certified.
+
+
+## Implementation log — 24 November 2026 (Phase 2 groundwork)
+
+- Added runtime canonical-instrument validation for venue, segment, symbol, quote currency, positive tick/lot/multiplier values, and complete option identity (underlying, ISO expiry, positive strike, CE/PE).
+- Applied instrument validation to paper-routing eligibility and destination-instrument checks.
+- Added destination segment capability checks so a broker cannot receive a mapped instrument in an undeclared segment.
+- Hardened lifecycle eligibility: management events require exact target order IDs; partial exits require explicit positive quantity, an order-event capable adapter, a reconciled open position quantity, and scaled quantity no greater than the copied position. Partial-exit quantity is calculated with exact decimal arithmetic.
+- Updated the broker connection UI to load credential field keys and labels from the server's authoritative provider registry instead of maintaining a second independent field-key map. This reduces UI/API credential naming drift.
+- Added focused domain tests for instrument validation, segment gating, target-order references, partial-exit sizing and market identity.
+
+These are committed source changes, not a validated build. GitHub Actions continues to terminate at job initialization with no steps or logs, and no local test runner has been available in this session. No passing test is claimed.
