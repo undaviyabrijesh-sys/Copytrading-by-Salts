@@ -14,7 +14,7 @@ Never request withdrawal, fund-transfer or payout permissions. Never store TOTP 
 | Provider | Authentication model | Setup fields / method | Important constraints | Research status |
 |---|---|---|---|---|
 | Zerodha Kite Connect | API key + API secret; broker login and request-token exchange | API key, API secret, registered redirect URL | Server-side handshake; plan entitlements; verify current static-IP and third-party routing rules | Official docs reviewed; adapter not built |
-| DhanHQ | User access token or API-key authentication; partner onboarding is separate | Access token or approved API key/secret flow | Individual vs partner eligibility; 24-hour token; static IP mandatory for order placement per docs | Official docs reviewed; adapter not built |
+| DhanHQ | API key + API secret + Dhan client ID | Dhan client ID (client_id), API key (app_id), API secret (app_secret) | Individual vs partner eligibility; 24-hour token; static IP mandatory for order placement per docs | Official docs reviewed; adapter not built |
 | Angel One SmartAPI | API key + client code + PIN + TOTP; JWT/refresh/feed tokens | API key, client code, one-time login challenge | Session normally ends at midnight; do not persist PIN/TOTP; verify static-IP and partner permissions | Official docs reviewed; adapter not built |
 | Upstox | OAuth 2.0 authorization code | Client ID, client secret, redirect URI; broker-hosted authorization | Broker handles user login; token expiry and partner/copy permissions need verification | Official docs reviewed; adapter not built |
 | FYERS v3 | OAuth authorization code; app ID/secret; daily access token | App ID, app secret, redirect URI | Personal apps are only for their creator; third-party platform requires common app approval | Official docs reviewed; approval gate |
@@ -170,3 +170,25 @@ Do not add a universal OTP/TOTP/PIN/token textbox. These values have different p
 **MFA boundary:** Salts' own authenticator MFA protects the Salts account. It is separate from broker OTP/TOTP. Broker OTP/TOTP/PIN are never interchangeable with Salts MFA and must never be stored in BrokerConnection.encryptedSecret as ordinary credentials.
 
 The broker catalogue, credential intake, verified account connection and validated copy execution remain separate product states. A form being visible must never imply broker support or permission to copy trades.
+
+
+## Implemented authentication slice — 24 November 2026
+
+### Delta Exchange India
+
+A provider-specific signed account-authentication check is now implemented in the API:
+- Uses only the Delta India production host https://api.india.delta.exchange; it does not send India credentials to Delta Global or demo/testnet.
+- Signs the exact HTTP method + Unix timestamp + request path + query string + body with HMAC-SHA256 and sends the required api-key, signature, timestamp and User-Agent headers.
+- Calls the documented read-only GET /v2/users/trading_preferences endpoint with a 10-second timeout.
+- Requires recent Salts MFA, scopes the connection lookup to the authenticated tenant, decrypts credentials server-side, and records only sanitized success/failure metadata.
+- The UI exposes a Verify account action for Delta connections.
+- Successful authentication sets connection status to CONNECTED, but explicitly records trading permission as UNKNOWN, withdrawal permission as NOT_VERIFIED, and live execution as DISABLED. This is an authentication check, not an order-execution certification.
+- IP allowlisting is enforced by Delta. The check may fail until a fixed egress IP is provisioned and whitelisted; no cloud networking has been provisioned.
+
+### DhanHQ individual consent flow — remaining work
+
+The Dhan credential contract now includes the Dhan client ID (client_id) as well as API key (app_id) and API secret (app_secret), because the official individual Generate Consent endpoint requires all three. The Dhan browser callback and one-time tokenId → Consume Consent exchange are not implemented yet. Dhan must remain PENDING until that flow, callback binding/replay protection, profile identity validation, expiry storage and reconnection are implemented and tested.
+
+### Verification boundary
+
+No real broker credentials were used during development. No live orders were submitted. Delta verification has code-level tests for deterministic signing and unsafe-path rejection, but the full API/UI build and integration tests must pass in CI before this slice is considered validated. Other broker authentication flows remain unimplemented.
