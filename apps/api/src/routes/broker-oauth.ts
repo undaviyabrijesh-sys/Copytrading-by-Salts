@@ -58,7 +58,8 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     return { authorizationUrl: url.toString(), expiresAt };
   });
 
-  app.get("/api/v1/brokers/oauth/:provider/callback", async (request, reply) => {
+  app.get("/api/v1/brokers/oauth/:provider/callback", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
+    reply.header("cache-control", "no-store").header("referrer-policy", "no-referrer").header("x-robots-tag", "noindex, nofollow");
     const { provider: raw } = request.params as { provider: string };
     const provider = raw.toUpperCase();
     if (!supported.has(provider)) return reply.code(404).send({ error: "Unsupported broker callback." });
