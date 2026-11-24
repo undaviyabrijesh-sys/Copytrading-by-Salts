@@ -52,6 +52,48 @@ A broker without a supported official API must remain unavailable. Do not scrape
 - Groww Trading API: https://groww.in/trade-api/docs
 - Delta Exchange API: https://docs.delta.exchange/
 
+## Expanded broker directory (catalogue coverage, not integration claims)
+
+The connection directory now also lists the following India providers so they are visible in the product and can be researched in one place:
+
+- IIFL Securities
+- Motilal Oswal
+- SAMCO
+- Tradejini
+- Nuvama
+- HDFC SKY
+- m.Stock
+- Sharekhan
+- Axis Direct
+- Choice Broking
+- Jainam
+- Mastertrust
+- Zebu
+- SAS Online
+- Paytm Money
+- Pocketful
+- Firstock
+- Stoxkart
+- Profitmart
+- Wisdom Capital
+- Composite Edge
+- Definedge
+- INDmoney
+- Anand Rathi
+- Religare Broking
+- SMC Global
+- Goodwill Wealth Management
+- Arrow
+
+These entries are intentionally marked **REVIEW_REQUIRED** and have no credential form. The official company website is a navigation starting point, not proof of a trading API. For each one, the research gate must establish: official API documentation and version; API availability for retail users; permitted application/partner model; supported order types and order lifecycle events; segments and instrument master; auth/token expiry/revocation; rate limits; static egress IP and whitelisting; order update stream/webhooks; sandbox or paper facilities; written third-party copy-trading permission. A broker that has no supported official API remains catalogue-only.
+
+The product should present three separate states, never collapse them into one “supported” badge:
+1. **Listed** — discoverable in the catalogue.
+2. **Connection verified** — provider-specific auth and account identity/scope health checks passed.
+3. **Copy execution validated** — source event ingestion, destination order lifecycle, reconciliation, risk gates and failure recovery passed the provider's acceptance suite.
+
+Only the third state may be considered an eligible adapter, and only after the platform/legal approval gate is separately satisfied.
+
 ## Implementation sequence
 1. Complete managed credential vault and key rotation design (AWS KMS/Secrets Manager; no AWS provisioning without explicit owner approval).
 2. Implement typed provider registry and credential schema. OAuth providers must use redirect-based authorization, not a generic password form.
