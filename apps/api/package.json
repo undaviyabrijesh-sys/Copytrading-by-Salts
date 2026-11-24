@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/security/*.test.ts",
     "prebuild": "pnpm --filter @salts/database build",
-    "pretypecheck": "pnpm --filter @salts/database build"
+    "pretypecheck": "pnpm --filter @salts/database build",
+    "predev": "pnpm --filter @salts/database db:generate && pnpm --filter @salts/database build"
   },
   "dependencies": {
     "fastify": "^5.3.3",
