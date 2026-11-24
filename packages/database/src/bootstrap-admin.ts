@@ -27,23 +27,23 @@ async function main() {
     throw new Error("Bootstrap authorization failed.");
   }
 
-  const existingAdmin = await prisma.user.findFirst({ where: { roles: { has: "ADMIN" } }, select: { id: true } });
-  if (existingAdmin) throw new Error("An admin already exists. Bootstrap is one-time and cannot be rerun.");
-
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) throw new Error("This email already belongs to an account. Contact an existing admin.");
-
-  const admin = await prisma.user.create({
-    data: {
-      email,
-      displayName: process.env.ADMIN_BOOTSTRAP_DISPLAY_NAME?.trim() || "Platform Owner",
-      passwordHash,
-      status: "ACTIVE",
-      roles: ["ADMIN"]
-    },
-    select: { id: true, email: true, roles: true, status: true }
-  });
+  const admin = await prisma.$transaction(async (tx) => {
+    const existingAdmin = await tx.user.findFirst({ where: { roles: { has: "ADMIN" } }, select: { id: true } });
+    if (existingAdmin) throw new Error("An admin already exists. Bootstrap is one-time and cannot be rerun.");
+    const existingUser = await tx.user.findUnique({ where: { email } });
+    if (existingUser) throw new Error("This email already belongs to an account. Contact an existing admin.");
+    return tx.user.create({
+      data: {
+        email,
+        displayName: process.env.ADMIN_BOOTSTRAP_DISPLAY_NAME?.trim() || "Platform Owner",
+        passwordHash,
+        status: "ACTIVE",
+        roles: ["ADMIN"]
+      },
+      select: { id: true, email: true, roles: true, status: true }
+    });
+  }, { isolationLevel: "Serializable" });
 
   console.info("Initial administrator created:", admin.email);
   console.info("Remove ADMIN_BOOTSTRAP_TOKEN, ADMIN_BOOTSTRAP_EXPECTED_TOKEN and ADMIN_BOOTSTRAP_PASSWORD from the runtime immediately.");
