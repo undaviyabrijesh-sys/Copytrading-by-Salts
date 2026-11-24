@@ -2,9 +2,22 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "@salts/database/client";
 import { currentUser, assertTrustedOrigin } from "./auth.js";
 import { credentialProviders } from "../providers/credential-providers.js";
-import { encryptBrokerSecret } from "../security/broker-vault.js";
+import { decryptBrokerSecret, encryptBrokerSecret } from "../security/broker-vault.js";
+import { verifyDeltaAccount } from "../providers/delta-auth.js";
 
 export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
+  app.get("/api/v1/brokers/connections", async (request, reply) => {
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    reply.header("cache-control", "no-store");
+    const connections = await prisma.brokerConnection.findMany({
+      where: { userId: actor.id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, market: true, provider: true, label: true, status: true, createdAt: true, lastHealthAt: true, tokenExpiresAt: true }
+    });
+    return { connections };
+  });
+
   app.get("/api/v1/brokers/providers", async () => ({
     providers: credentialProviders.map(({ id, label, market, auth, fields, docsUrl, connectEnabled, note }) => ({
       id, label, market, auth, fields: fields.map(({ key, label }) => ({ key, label, type: "password" })),
@@ -33,8 +46,8 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     if (!provider.connectEnabled || provider.fields.length === 0) return reply.code(409).send({ error: "Secure credential intake is not configured for this provider." });
     const supplied = Object.keys(body.credentials);
     const allowed = new Set(provider.fields.map(field => field.key));
-    if (supplied.length < 1 || supplied.some(key => !allowed.has(key))) {
-      return reply.code(400).send({ error: "Submit at least one supported broker-issued API credential field. Unknown fields are rejected." });
+    if (supplied.some(key => !allowed.has(key)) || supplied.length !== allowed.size || [...allowed].some(key => !Object.hasOwn(body.credentials, key))) {
+      return reply.code(400).send({ error: "Submit every required credential field using this provider's exact field contract. Unknown or missing fields are rejected." });
     }
     if (Object.values(body.credentials).some(value => !value.trim())) return reply.code(400).send({ error: "Credential values cannot be empty." });
     let encrypted;
@@ -59,6 +72,79 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     });
     reply.header("cache-control", "no-store");
     return reply.code(201).send({ connection, message: "Credentials encrypted and saved. This is credential intake only; connection remains PENDING until provider-specific authentication, account identity and permissions are verified." });
+  });
+
+  app.post("/api/v1/brokers/connections/:connectionId/verify", {
+    config: { rateLimit: { max: 3, timeWindow: "1 minute" } }
+  }, async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    if (!actor.totpEnabled || !actor.mfaVerifiedAt || Date.now() - actor.mfaVerifiedAt.getTime() > 10 * 60 * 1000) {
+      return reply.code(403).send({ error: "Recent authenticator MFA verification is required to verify a broker connection." });
+    }
+    const { connectionId } = request.params as { connectionId: string };
+    const connection = await prisma.brokerConnection.findFirst({
+      where: { id: connectionId, userId: actor.id },
+      select: { id: true, provider: true, market: true, encryptedSecret: true }
+    });
+    if (!connection) return reply.code(404).send({ error: "Broker connection not found." });
+    if (connection.provider !== "DELTA_INDIA" || connection.market !== "CRYPTO") {
+      return reply.code(409).send({ error: "Provider-specific verification is not implemented for this broker yet. Credentials remain encrypted and the connection is not marked connected." });
+    }
+
+    try {
+      const credentials = await decryptBrokerSecret(connection.encryptedSecret);
+      await verifyDeltaAccount(credentials);
+      const now = new Date();
+      await prisma.$transaction([
+        prisma.brokerConnection.update({
+          where: { id: connection.id },
+          data: {
+            status: "CONNECTED",
+            lastHealthAt: now,
+            permissions: {
+              authentication: "VERIFIED",
+              accountIdentity: "AUTHENTICATED_BY_SIGNED_ACCOUNT_ENDPOINT",
+              tradingPermission: "UNKNOWN",
+              withdrawalPermission: "NOT_VERIFIED",
+              liveExecution: "DISABLED"
+            }
+          }
+        }),
+        prisma.auditEvent.create({
+          data: {
+            actorId: actor.id, tenantId: actor.id, action: "BROKER_CONNECTION_AUTHENTICATED",
+            targetType: "BrokerConnection", targetId: connection.id, requestId: request.id,
+            metadata: { provider: "DELTA_INDIA", market: "CRYPTO", verification: "SIGNED_READ_ONLY_ACCOUNT_ENDPOINT" }
+          }
+        })
+      ]);
+      reply.header("cache-control", "no-store");
+      return { ok: true, status: "CONNECTED", message: "Delta API authentication succeeded. Trading permissions and copy execution remain separately unverified and live execution stays disabled." };
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "DELTA_PROVIDER_UNAVAILABLE";
+      const safeErrors: Record<string, string> = {
+        DELTA_CREDENTIALS_INCOMPLETE: "The saved Delta API key/secret pair is incomplete. Replace the credentials.",
+        DELTA_AUTHENTICATION_FAILED: "Delta rejected the API key or signature. Check that these are Delta India production credentials.",
+        DELTA_IP_OR_PERMISSION_CHECK_FAILED: "Delta rejected the request because the egress IP may not be allowlisted or the key lacks read permission.",
+        DELTA_RATE_LIMITED: "Delta rate limit reached. Wait before retrying.",
+        DELTA_PROVIDER_UNAVAILABLE: "Delta account verification is temporarily unavailable. Try again later."
+      };
+      await prisma.brokerConnection.update({
+        where: { id: connection.id },
+        data: { status: "ERROR", lastHealthAt: new Date(), permissions: { authentication: "FAILED", tradingPermission: "UNKNOWN", withdrawalPermission: "NOT_VERIFIED", liveExecution: "DISABLED" } }
+      });
+      await prisma.auditEvent.create({
+        data: {
+          actorId: actor.id, tenantId: actor.id, action: "BROKER_CONNECTION_AUTHENTICATION_FAILED",
+          targetType: "BrokerConnection", targetId: connection.id, requestId: request.id,
+          metadata: { provider: "DELTA_INDIA", market: "CRYPTO", failureCode: code }
+        }
+      });
+      request.log.warn({ provider: "DELTA_INDIA", failureCode: code, connectionId: connection.id }, "Broker account verification failed");
+      return reply.code(422).send({ error: safeErrors[code] ?? "Broker verification failed. Credentials remain encrypted." });
+    }
   });
 
   app.delete("/api/v1/brokers/connections/:connectionId", async (request, reply) => {
