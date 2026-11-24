@@ -1,5 +1,6 @@
 import type { AdapterCapabilities, CanonicalInstrument, CanonicalOrderType, Market } from "./index.js";
 import { assertMarketMatch, isOrderTypeSupported } from "./index.js";
+import { compareDecimalStrings, isDecimalMultiple, isPositiveDecimal } from "./decimal.js";
 
 export interface CopyRequest {
   sourceMarket: Market;
@@ -36,17 +37,15 @@ export function evaluateCopyRequest(request: CopyRequest): CopyEligibility {
   if (!isOrderTypeSupported(request.orderType, request.capabilities)) {
     return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: `Destination broker does not support ${request.orderType} for this account capability set.` };
   }
-  if (!/^\d+(\.\d+)?$/.test(request.quantity) || Number(request.quantity) <= 0) {
+  if (!isPositiveDecimal(request.quantity)) {
     return { eligible: false, code: "INVALID_QUANTITY", reason: "Quantity must be a positive decimal value." };
   }
   if (request.lotSize) {
-    const q = Number(request.quantity);
-    const lot = Number(request.lotSize);
-    if (!(lot > 0) || q < lot || Math.abs(q / lot - Math.round(q / lot)) > 1e-9) {
+    if (!isPositiveDecimal(request.lotSize) || !isDecimalMultiple(request.quantity, request.lotSize)) {
       return { eligible: false, code: "INVALID_LOT_QUANTITY", reason: "Quantity is below one lot or is not a valid lot multiple; order skipped." };
     }
   }
-  if (request.minQuantity && Number(request.quantity) < Number(request.minQuantity)) {
+  if (request.minQuantity && (compareDecimalStrings(request.quantity, request.minQuantity) ?? -1) < 0) {
     return { eligible: false, code: "BELOW_MIN_QUANTITY", reason: "Quantity is below the destination broker minimum." };
   }
   return { eligible: true, instrument: request.destinationInstrument, quantity: request.quantity };
