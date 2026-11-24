@@ -79,7 +79,7 @@ export default function ConnectionsPage() {
     UPSTOX:["clientId","clientSecret"], FYERS:["clientId","clientSecret"],
     SHOONYA:["clientId","clientSecret"], FLATTRADE:["apiKey","apiSecret"],
     FIVE_PAISA:["clientId","clientSecret"], ICICI_BREEZE:["apiKey","apiSecret"],
-    ALICE_BLUE:["clientId","apiSecret"], DHAN:["accessToken"],
+    ALICE_BLUE:["clientId","apiSecret"], DHAN:["apiKey","apiSecret"],
     GROWW:["accessToken"], DELTA_INDIA:["apiKey","apiSecret"]
   };
   const credentialKeys = !broker || broker.status !== "DOCUMENTED" ? [] : (credentialDefinitions[broker.id] ?? []);
