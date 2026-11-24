@@ -20,11 +20,13 @@ test("Dhan, Delta and Groww expose their documented static credential fields", (
   const delta = credentialProviders.find(provider => provider.id === "DELTA_INDIA");
   const dhan = credentialProviders.find(provider => provider.id === "DHAN");
   const groww = credentialProviders.find(provider => provider.id === "GROWW");
+  const fivePaisa = credentialProviders.find(provider => provider.id === "FIVE_PAISA");
   assert.equal(delta?.market, "CRYPTO");
   assert.deepEqual(delta?.fields.map(field => field.key), ["apiKey", "apiSecret"]);
   assert.equal(dhan?.market, "INDIA");
   assert.deepEqual(dhan?.fields.map(field => field.key), ["clientId", "apiKey", "apiSecret"]);
   assert.equal(groww?.market, "INDIA");
+  assert.deepEqual(fivePaisa?.fields.map(field => field.key), ["clientId", "clientSecret", "userId"]);
   assert.deepEqual(groww?.fields.map(field => field.key), ["accessToken"]);
 });
 
