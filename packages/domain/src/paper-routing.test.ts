@@ -107,10 +107,28 @@ test("requires exact source order references for modifications and cancellations
 
 test("requires explicit quantity and partial-fill capability for partial exits", () => {
   const partial = { ...signal, event: "PARTIAL_EXIT" as const, quantity: undefined };
-  const missingQty = evaluatePaperRouting({ subscription, signal: partial, destination: { ...destination, linkedPositionExists: true } });
+  const missingQty = evaluatePaperRouting({ subscription, signal: partial, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "0.5" } });
   assert.equal(missingQty.eligible, false);
   if (!missingQty.eligible) assert.equal(missingQty.code, "PARTIAL_EXIT_QUANTITY_REQUIRED");
-  const unsupported = evaluatePaperRouting({ subscription, signal: { ...signal, event: "PARTIAL_EXIT" as const, quantity: "0.25" }, destination: { ...destination, linkedPositionExists: true, capabilities: { ...capabilities, supportsPartialFills: false } } });
+  const unsupported = evaluatePaperRouting({ subscription, signal: { ...signal, event: "PARTIAL_EXIT" as const, quantity: "0.25" }, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "0.5", capabilities: { ...capabilities, supportsPartialFills: false } } });
   assert.equal(unsupported.eligible, false);
   if (!unsupported.eligible) assert.equal(unsupported.code, "PARTIAL_EXIT_UNSUPPORTED");
+});
+
+
+test("scales partial exits exactly and never closes more than the reconciled position", () => {
+  const partial = { ...signal, event: "PARTIAL_EXIT" as const, quantity: "1" };
+  const allowed = evaluatePaperRouting({ subscription, signal: partial, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "0.5" } });
+  assert.equal(allowed.eligible, true);
+  if (allowed.eligible) assert.equal(allowed.quantity, "0.25");
+  const tooLarge = evaluatePaperRouting({ subscription, signal: { ...partial, quantity: "3" }, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "0.5" } });
+  assert.equal(tooLarge.eligible, false);
+  if (!tooLarge.eligible) assert.equal(tooLarge.code, "PARTIAL_EXIT_EXCEEDS_POSITION");
+});
+
+test("rejects malformed source instrument before routing", () => {
+  const malformed = { ...signal, instrument: { ...instrument, tickSize: "0" } };
+  const result = evaluatePaperRouting({ subscription, signal: malformed, destination });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "INSTRUMENT_TICK_SIZE_INVALID");
 });
