@@ -112,16 +112,16 @@ The earlier generic five-field form was not sufficient to connect brokers and co
 
 | Provider | Static credential fields collected by the form | Authentication still required after saving |
 |---|---|---|
-| Zerodha Kite Connect | API key, API secret | Broker-hosted Kite login, short-lived request-token callback, server-side checksum exchange, profile/scope verification |
-| Angel One SmartAPI | SmartAPI app API key | Broker-hosted publisher login/callback or approved login flow; account identity and token verification. PIN/TOTP are not collected in the form |
-| Upstox | Client ID, client secret | OAuth authorization-code redirect, exact redirect URI, one-time code exchange, identity/scope verification |
+| Zerodha Kite Connect | API key, API secret | Broker-hosted Kite login, short-lived request-token callback, server-side checksum exchange, profile/scope verification; token is callback output, not a static form field |
+| Angel One SmartAPI | SmartAPI app API key | Prefer SmartAPI publisher-login URL with random state and broker redirect returning auth_token/feed_token; direct loginByPassword needs client code + PIN + current TOTP and must only be an explicitly approved ephemeral challenge, never saved |
+| Upstox | Client ID, client secret | Preferred: OAuth authorization-code redirect, exact redirect URI, one-time code exchange. Official API also documents a TOTP+PIN token endpoint, but this must not be the default platform flow or stored as reusable credentials |
 | FYERS | App ID, app secret | Approved third-party/common-app OAuth flow, state validation, auth-code exchange; an individual app cannot authenticate other FYERS users |
 | Shoonya | Client ID, secret code | Broker-hosted OAuth authorization, IP whitelist prerequisite, one-time code/checksum exchange; no password/TOTP collection |
-| Flattrade | API key, API secret | Broker-hosted authorization, redirect/request-token exchange, session verification |
+| Flattrade | API key, API secret | Browser authorization URL; user enters UCC, broker password and PAN/year of birth on Flattrade; redirect returns one-time request_code, then server exchanges it using API key and SHA-256-derived secret from registered static IP. No OTP field in Salts |
 | 5paisa Xstream | App key, encryption key | OAuth login, request-token exchange, user ID and daily access-token handling |
 | ICICI Direct Breeze | App key, secret key | Broker-hosted OAuth login, API_Session → CustomerDetails session-token exchange, registered static IP and supported order-type checks |
 | Alice Blue ANT | App code, API secret | Broker-hosted login, authCode + userId callback, server-side checksum/session exchange |
-| DhanHQ | Access token | Validate token/profile, account-specific static IP and order permission; partner onboarding is separate |
+| DhanHQ | API key, API secret | Preferred individual API-key consent: Generate Consent → broker-hosted login/2FA → one-time tokenId callback → server-side Consume Consent → access token and Dhan profile. Manual 24-hour access-token entry remains a fallback, not the preferred host/subscriber onboarding |
 | Groww Trade API | Access token | Validate token/profile, daily expiry and CASH/FNO entitlement |
 | Delta Exchange India | API key, API secret | Signed REST/private WebSocket health checks, account identity, key permissions and IP allowlist |
 
@@ -144,5 +144,29 @@ Research evidence reviewed against official provider documentation includes:
 - DhanHQ access token and individual static-IP requirements: https://dhanhq.co/docs/v2/authentication/
 - Groww daily access token and CASH/FNO-only entitlement: https://groww.in/trade-api/docs/curl
 - Delta API key/secret and trading-key IP allowlisting: https://docs.delta.exchange/
+
+
+## OTP, TOTP, request-token and access-token field policy
+
+Do not add a universal OTP/TOTP/PIN/token textbox. These values have different purposes and lifetimes and must be handled by the broker-specific flow:
+
+| Provider | Is a one-time challenge applicable? | Correct handling in Salts |
+|---|---|---|
+| Zerodha | Broker login challenge; request_token follows successful login | Redirect user to Kite; capture request_token on the registered callback and exchange once server-side. Never ask for Zerodha password/TOTP in Salts |
+| Angel One | Direct SmartAPI loginByPassword requires client code + PIN + current TOTP; publisher login is also documented | Prefer publisher-login redirect and validate returned state; handle returned auth_token/feed_token server-side. Do not persist PIN/TOTP or create generic OTP fields |
+| Upstox | OAuth login can use broker-side OTP/TOTP; a separate official TOTP+PIN token endpoint exists | Prefer OAuth authorization code. TOTP+PIN is a sensitive alternate flow and must not be collected/stored by the general connection form |
+| FYERS | Broker-hosted login/2FA then auth_code | Use approved third-party/common-app OAuth, validate state, exchange auth_code server-side; access token expires daily at 6:30 AM |
+| Shoonya | Current official auth overview specifies OAuth | Broker-hosted OAuth and one-time callback; do not implement older community TOTP/password login recipes unless current official docs explicitly reinstate them |
+| Flattrade | Browser login requires UCC, broker password and PAN/year of birth; redirect produces short-lived request_code | User enters credentials only on Flattrade. Capture request_code and exchange server-side from registered static IP. Do not add PIN/OTP field based on generic assumptions |
+| 5paisa | OAuth or TOTP-assisted request-token generation | Prefer OAuth. If a documented TOTP alternative is approved, use a one-time in-memory challenge only; exchange request token immediately using app encryption key |
+| ICICI Breeze | Broker login/session flow | Use the current documented broker login and API_Session callback/exchange; do not invent an OTP field until the exact supported flow is confirmed for the app |
+| Alice Blue | Broker login produces authCode and userId | Capture callback values and exchange server-side with app credentials; do not collect broker password/TOTP in a reusable form |
+| DhanHQ | Consent flow includes user login and 2FA on Dhan's own page; TOTP can be configured for API-only flows | Use Generate Consent → browser-based Dhan login → tokenId callback → Consume Consent. Manual 24-hour token is an optional fallback. Never store PIN/TOTP seed |
+| Groww | Current API flow uses a user-generated API access token | User generates token in Groww's authenticated portal and pastes only the API token into the secure token field; do not ask for Groww password or OTP |
+| Delta Exchange India | API key/secret signing; IP allowlisting | No OTP field for normal API signing. Verify signed account endpoint and permissions; restrict key to trading/read and no withdrawals |
+
+**Token distinction:** a static app secret/API key identifies the application; an authorization/request code is short-lived and single-use; an access/session token is the resulting credential used for API calls and expires/revokes on the provider's schedule. Only the first category belongs in the static credential form. Callback codes and resulting access tokens must be handled by provider-specific server-side authentication, encrypted at rest, never exposed in logs or query analytics, and tied to the initiating user/connection using one-time state and replay protection.
+
+**MFA boundary:** Salts' own authenticator MFA protects the Salts account. It is separate from broker OTP/TOTP. Broker OTP/TOTP/PIN are never interchangeable with Salts MFA and must never be stored in BrokerConnection.encryptedSecret as ordinary credentials.
 
 The broker catalogue, credential intake, verified account connection and validated copy execution remain separate product states. A form being visible must never imply broker support or permission to copy trades.
