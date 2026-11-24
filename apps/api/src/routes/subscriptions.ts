@@ -57,6 +57,40 @@ export async function registerSubscriptionRoutes(app: FastifyInstance) {
     return reply.code(201).send({ subscription, executionMode: "PAPER_ONLY" });
   });
 
+
+  app.patch("/api/v1/subscriptions/:subscriptionId/settings", {
+    schema: {
+      params: { type: "object", required: ["subscriptionId"], properties: { subscriptionId: { type: "string", minLength: 1 } } },
+      body: {
+        type: "object", additionalProperties: false, required: ["quantityMultiplier"],
+        properties: {
+          quantityMultiplier: { type: "number", minimum: 0.1, maximum: 10 },
+          maxOrderValue: { type: "number", exclusiveMinimum: 0, maximum: 100000000 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    const { subscriptionId } = request.params as { subscriptionId: string };
+    const body = request.body as { quantityMultiplier: number; maxOrderValue?: number };
+    const existing = await prisma.hostSubscription.findFirst({ where: { id: subscriptionId, subscriberId: actor.id } });
+    if (!existing) return reply.code(404).send({ error: "Subscription not found." });
+    const settings = {
+      quantityMultiplier: body.quantityMultiplier,
+      ...(body.maxOrderValue !== undefined ? { maxOrderValue: body.maxOrderValue } : {})
+    };
+    const subscription = await prisma.hostSubscription.update({
+      where: { id: subscriptionId },
+      data: { settings }
+    });
+    await prisma.auditEvent.create({
+      data: { actorId: actor.id, tenantId: actor.id, action: "SUBSCRIPTION_RISK_SETTINGS_UPDATED", targetType: "HostSubscription", targetId: subscription.id, requestId: randomBytes(12).toString("hex") }
+    });
+    return { subscription };
+  });
+
   app.delete("/api/v1/subscriptions/:subscriptionId", async (request, reply) => {
     assertTrustedOrigin(request);
     const actor = await currentUser(request);
