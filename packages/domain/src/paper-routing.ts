@@ -1,6 +1,7 @@
 import type { AdapterCapabilities, CanonicalInstrument, CanonicalOrderType, Market, SignalEventType, Side } from "./index.js";
 import { evaluateCopyRequest } from "./copy-policy.js";
 import { compareDecimalStrings, isDecimalMultiple, isPositiveDecimal, multiplyDecimalStrings } from "./decimal.js";
+import { validateCanonicalInstrument } from "./instrument-validation.js";
 
 export interface PaperSubscriptionContext {
   id: string;
@@ -63,6 +64,8 @@ export function evaluatePaperRouting(input: {
   destination: PaperDestinationContext;
 }): PaperRoutingDecision {
   const { subscription: sub, signal, destination: dest } = input;
+  const sourceInstrumentCheck = validateCanonicalInstrument(signal.instrument);
+  if (!sourceInstrumentCheck.valid) return { eligible: false, code: sourceInstrumentCheck.code, reason: sourceInstrumentCheck.reason };
   const isEntry = signal.event === "ENTRY";
 
   if (sub.hostUserId !== signal.hostUserId) return { eligible: false, code: "HOST_SUBSCRIPTION_MISMATCH", reason: "Signal host does not match the subscribed host." };
@@ -85,6 +88,8 @@ export function evaluatePaperRouting(input: {
 
   if (!isEntry) {
     if (!dest.instrumentMapped || !dest.destinationInstrument || dest.destinationInstrument.market !== dest.market) return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "Existing position management requires a verified destination instrument mapping." };
+    const destinationInstrumentCheck = validateCanonicalInstrument(dest.destinationInstrument);
+    if (!destinationInstrumentCheck.valid) return { eligible: false, code: destinationInstrumentCheck.code, reason: destinationInstrumentCheck.reason };
     if (["MODIFY_ORDER", "CANCEL", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.targetOrderId) return { eligible: false, code: "TARGET_ORDER_REQUIRED", reason: "This management event must reference the exact source order; ambiguous order matching is not allowed." };
     if (signal.event === "PARTIAL_EXIT") {
       if (!signal.quantity || !isPositiveDecimal(signal.quantity)) return { eligible: false, code: "PARTIAL_EXIT_QUANTITY_REQUIRED", reason: "Partial exits require an explicit positive quantity." };
