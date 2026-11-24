@@ -46,7 +46,7 @@ export interface PaperDestinationContext {
 }
 
 function decimalParts(value: string): { coefficient: bigint; scale: number } | null {
-  if (!/^\d+(?:\.\d+)?$/.test(value)) return null;
+  if (value.length > 64 || !/^\d+(?:\.\d+)?$/.test(value)) return null;
   const [whole, fraction = ""] = value.split(".");
   return { coefficient: BigInt(whole + fraction), scale: fraction.length };
 }
@@ -122,12 +122,27 @@ export function evaluatePaperRouting(input: {
     if (["PLACE_STOP_LOSS", "MODIFY_STOP_LOSS"].includes(signal.event) && !dest.capabilities.supportsStopLoss) return { eligible: false, code: "STOP_LOSS_UNSUPPORTED", reason: "Destination adapter does not support stop-loss orders." };
     if (["PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT"].includes(signal.event) && !dest.capabilities.supportsTakeProfit) return { eligible: false, code: "TAKE_PROFIT_UNSUPPORTED", reason: "Destination adapter does not support take-profit orders." };
     if (signal.event === "TRAIL_STOP" && !dest.capabilities.supportsTrailingStop) return { eligible: false, code: "TRAILING_STOP_UNSUPPORTED", reason: "Destination adapter does not support trailing stops." };
-    return { eligible: true, event: signal.event, managementOnly: true };
+    return { eligible: true, event: signal.event, instrument: dest.destinationInstrument, managementOnly: true };
   }
 
   if (!signal.orderType) return { eligible: false, code: "ORDER_TYPE_MISSING", reason: "Signal does not contain a normalized order type." };
   if (!signal.side) return { eligible: false, code: "SIDE_MISSING", reason: "Entry signal does not contain a normalized BUY or SELL side." };
 
+  if (!Number.isSafeInteger(dest.openOrderCount) || dest.openOrderCount < 0 || !Number.isFinite(dest.dailyLoss) || dest.dailyLoss < 0) {
+    return { eligible: false, code: "INVALID_RISK_SNAPSHOT", reason: "Subscriber risk snapshot is invalid; routing is blocked." };
+  }
+  if (sub.settings.maxOpenOrders !== undefined && (!Number.isSafeInteger(sub.settings.maxOpenOrders) || sub.settings.maxOpenOrders < 1)) {
+    return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber maximum open-order limit is invalid." };
+  }
+  if (sub.settings.maxDailyLoss !== undefined && (!Number.isFinite(sub.settings.maxDailyLoss) || sub.settings.maxDailyLoss < 0)) {
+    return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber daily-loss limit is invalid." };
+  }
+  if (sub.settings.maxQuantity !== undefined && (compareDecimals(String(sub.settings.maxQuantity), "0") ?? -1) <= 0) {
+    return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber maximum quantity is invalid." };
+  }
+  if (sub.settings.maxOrderValue !== undefined && (compareDecimals(String(sub.settings.maxOrderValue), "0") ?? -1) <= 0) {
+    return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber maximum order value is invalid." };
+  }
   if (sub.settings.maxOpenOrders !== undefined && dest.openOrderCount >= sub.settings.maxOpenOrders) {
     return { eligible: false, code: "MAX_OPEN_ORDERS", reason: "Subscriber open-order limit has been reached." };
   }
