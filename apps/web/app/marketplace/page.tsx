@@ -20,7 +20,9 @@ export default function MarketplacePage() {
   const [market, setMarket] = useState<"INDIA" | "CRYPTO">("INDIA");
   const [listings, setListings] = useState<Listing[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [intents, setIntents] = useState<CopyIntent[]>([]);\n  const [connections, setConnections] = useState<BrokerConnection[]>([]);\n  const [destinationConnectionId, setDestinationConnectionId] = useState("");
+  const [intents, setIntents] = useState<CopyIntent[]>([]);
+  const [connections, setConnections] = useState<BrokerConnection[]>([]);
+  const [destinationConnectionId, setDestinationConnectionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -37,7 +39,8 @@ export default function MarketplacePage() {
       ]);
       setListings(listingData.listings);
       setSubscriptions(subscriptionData.subscriptions);
-      setIntents(intentData.intents);\n      setConnections(connectionData.connections);
+      setIntents(intentData.intents);
+      setConnections(connectionData.connections);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load marketplace."); }
     finally { setLoading(false); }
   }
