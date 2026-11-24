@@ -9,8 +9,8 @@ Branch: `phase1-foundation`
 - Login/logout/me endpoints use opaque random session tokens. Only token hashes are persisted. Session records are revocable and expire after 12 hours. Session cookie is HttpOnly, SameSite=Strict, scoped to the API path, and Secure in production.
 - TOTP MFA enrollment, encrypted secret storage (AES-256-GCM), authenticator verification, MFA login challenge and 10-minute admin step-up verification are implemented. The encryption key is supplied through `MFA_ENCRYPTION_KEY` and must be kept in a production secret manager.
 - Login, invite redemption and invite issuance have per-route rate limits. Mutating auth/admin routes require exact `APP_ORIGIN` match.
-- Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites, approve HOST role, suspend/reactivate users, and revoke unused invites.
-- Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication. Pausing, unpublishing or removing a listing also pauses its active subscriptions to prevent new routing.
+- Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites/listings, approve HOST role, suspend/reactivate users, moderate listings, and revoke unused invites. Listing suspension pauses active subscriptions; reinstatement returns the listing to DRAFT so the host must review and republish. Moderation and its audit event are committed atomically.
+- Host listing endpoints support create, list, edit, publish, pause and soft-remove. Hosts cannot edit or republish administrator-suspended listings. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication. Pausing, unpublishing or removing a listing also pauses its active subscriptions to prevent new routing.
 - Subscription endpoints support list, subscribe, unsubscribe and subscriber-owned risk-setting updates. A subscription is linked to one listing and market, defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future entries must stop.
 - Initial host listing and subscriber marketplace pages are connected to these APIs. Hosts can create, edit, publish, pause and remove listings; subscribers can browse India/Crypto listings, subscribe/unsubscribe, set a quantity multiplier and optional max order value. Authenticated admin/host/marketplace pages include sign-out controls.
 - Audit events are written for invite creation, host listing changes and subscription changes.
@@ -31,7 +31,7 @@ Branch: `phase1-foundation`
 - Host application workflow, audit-log viewer and additional account recovery controls. Admin APIs and an initial owner console are implemented; frontend integration tests remain.
 - Broker connection wizard and KMS-backed broker credential encryption.
 - Prisma initial PostgreSQL migration is committed, with deployment/status scripts and migration runbook. It has not yet been applied to a database or validated by a successful CI run. CI now provisions ephemeral PostgreSQL and attempts schema validation/migration; GitHub is still reporting a job-level failure with no step list or downloadable logs.
-- Paper execution engine, event lifecycle/replay, broker adapters and reconciliation. The current paper-routing policy is a pure domain gate with unit tests added, not an active copy worker.
+- Paper execution engine, event lifecycle/replay, broker adapters and reconciliation. Administrator listing moderation UI/API is now present, but requires integration tests. The current paper-routing policy is a pure domain gate with unit tests added, not an active copy worker.
 
 ## Safety gates
 
