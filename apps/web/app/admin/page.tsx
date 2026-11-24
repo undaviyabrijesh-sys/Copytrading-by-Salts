@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 type UserRow = { id: string; email: string; displayName: string; status: string; roles: string[]; totpEnabled: boolean; createdAt: string };
 type InviteRow = { id: string; expiresAt: string; usedAt: string | null; revokedAt: string | null; createdAt: string };
+type ListingRow = { id: string; hostUserId: string; market: string; title: string; status: string; updatedAt: string; host: { displayName: string; email: string }; _count: { subscriptions: number } };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -22,6 +23,7 @@ export default function AdminPage() {
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
+  const [listings, setListings] = useState<ListingRow[]>([]);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaSecret, setMfaSecret] = useState("");
   const [inviteLink, setInviteLink] = useState("");
@@ -36,12 +38,14 @@ export default function AdminPage() {
       setAuthorized(true);
       setMfaEnabled(me.user.totpEnabled);
       if (!me.user.totpEnabled) return;
-      const [userData, inviteData] = await Promise.all([
+      const [userData, inviteData, listingData] = await Promise.all([
         api<{ users: UserRow[] }>("/api/v1/admin/users"),
-        api<{ invites: InviteRow[] }>("/api/v1/admin/invites")
+        api<{ invites: InviteRow[] }>("/api/v1/admin/invites"),
+        api<{ listings: ListingRow[] }>("/api/v1/admin/listings")
       ]);
       setUsers(userData.users);
       setInvites(inviteData.invites);
+      setListings(listingData.listings);
     } catch (err) {
       const e = err as Error & { status?: number };
       if (e.status === 403 && e.message.includes("Recent MFA")) {
@@ -106,6 +110,18 @@ export default function AdminPage() {
     finally { setBusyId(""); }
   }
 
+
+  async function moderateListing(listing: ListingRow) {
+    setBusyId(listing.id);
+    setError("");
+    try {
+      const action = listing.status === "SUSPENDED" ? "REINSTATE" : "SUSPEND";
+      await api(`/api/v1/admin/listings/${listing.id}/moderation`, { method: "PATCH", body: JSON.stringify({ action }) });
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Unable to moderate listing."); }
+    finally { setBusyId(""); }
+  }
+
   async function revokeInvite(invite: InviteRow) {
     setBusyId(invite.id);
     try {
@@ -142,6 +158,13 @@ export default function AdminPage() {
         {inviteLink && <div className="invite-output"><span>{inviteLink}</span><button onClick={() => void navigator.clipboard.writeText(inviteLink)}>Copy link</button></div>}
         <div className="table-wrap"><table><thead><tr><th>Created</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead><tbody>
           {invites.map(invite => <tr key={invite.id}><td>{new Date(invite.createdAt).toLocaleString()}</td><td>{new Date(invite.expiresAt).toLocaleString()}</td><td>{invite.usedAt ? "Used" : invite.revokedAt ? "Revoked" : new Date(invite.expiresAt) < new Date() ? "Expired" : "Active"}</td><td>{!invite.usedAt && !invite.revokedAt && new Date(invite.expiresAt) > new Date() && <button className="quiet-button" disabled={busyId === invite.id} onClick={() => revokeInvite(invite)}>Revoke</button>}</td></tr>)}
+        </tbody></table></div>
+      </section>
+
+      <section className="card">
+        <div className="section-head"><div><h2>Host listing moderation</h2><p className="sub">Suspension pauses active subscriptions. Reinstatement returns a listing to DRAFT; the host must review and republish it.</p></div><span className="pill">{listings.length} listings</span></div>
+        <div className="table-wrap"><table><thead><tr><th>Listing</th><th>Host</th><th>Market</th><th>Status</th><th>Active subscribers</th><th>Action</th></tr></thead><tbody>
+          {listings.map(listing => <tr key={listing.id}><td><strong>{listing.title}</strong><small>{new Date(listing.updatedAt).toLocaleString()}</small></td><td>{listing.host.displayName}<small>{listing.host.email}</small></td><td>{listing.market}</td><td>{listing.status}</td><td>{listing._count.subscriptions}</td><td><button className="quiet-button" disabled={busyId === listing.id} onClick={() => moderateListing(listing)}>{listing.status === "SUSPENDED" ? "Reinstate to draft" : "Suspend listing"}</button></td></tr>)}
         </tbody></table></div>
       </section>
       <section className="card">
