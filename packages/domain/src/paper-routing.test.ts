@@ -73,3 +73,18 @@ test("fails closed for unsupported stop loss lifecycle events", () => {
   assert.equal(result.eligible, false);
   if (!result.eligible) assert.equal(result.code, "STOP_LOSS_UNSUPPORTED");
 });
+
+test("blocks new entries at open-order and daily-loss limits", () => {
+  const openLimit = evaluatePaperRouting({ subscription, signal, destination: { ...destination, openOrderCount: 5 } });
+  assert.equal(openLimit.eligible, false);
+  if (!openLimit.eligible) assert.equal(openLimit.code, "MAX_OPEN_ORDERS");
+  const lossLimit = evaluatePaperRouting({ subscription, signal, destination: { ...destination, dailyLoss: 500 } });
+  assert.equal(lossLimit.eligible, false);
+  if (!lossLimit.eligible) assert.equal(lossLimit.code, "DAILY_LOSS_LIMIT");
+});
+
+test("fails closed when risk snapshot is malformed", () => {
+  const result = evaluatePaperRouting({ subscription, signal, destination: { ...destination, openOrderCount: Number.NaN } });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "INVALID_RISK_SNAPSHOT");
+});
