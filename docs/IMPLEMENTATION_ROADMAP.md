@@ -41,7 +41,7 @@ Product objective: a secure, multi-tenant, cross-broker platform that copies a h
 ## Current verified baseline (24 November 2026)
 
 - Active branch: `phase1-foundation`.
-- Last recorded commit before this roadmap: `dd87f8e537928cfe6ccc2860e37abdf672b9658e`.
+- Latest implementation commit at this log update: `1ea14682b51f86ee5619e91952a4b22af1db6255`.
 - Authentication source exists for Zerodha, Upstox, FYERS, Angel One and 5paisa.
 - Read-only account verification source exists for Groww and Delta Exchange India.
 - Dhan, Shoonya, Flattrade, ICICI Breeze and Alice Blue do not yet have complete authentication flows.
@@ -65,3 +65,12 @@ Complete Phase 1 provider contract alignment and tests before expanding broker c
 - Added focused domain tests for instrument validation, segment gating, target-order references, partial-exit sizing and market identity.
 
 These are committed source changes, not a validated build. GitHub Actions continues to terminate at job initialization with no steps or logs, and no local test runner has been available in this session. No passing test is claimed.
+
+
+## Follow-up implementation log — 24 November 2026
+
+- Connections UI now fetches the broker credential field keys and labels from `GET /api/v1/brokers/providers`; it no longer owns a second credential-key dictionary. Provider readiness states are displayed separately in the connection detail panel.
+- Partial-exit sizing now rejects zero/invalid multipliers, requires exact reconciled copied position quantity, validates lot/minimum quantity where supplied, and refuses to exceed the open copied quantity.
+- Source and destination canonical instrument identity is checked before routing; source market must match the selected India/Crypto workspace, and management routing checks destination segment capability too.
+- Latest source commit: `1ea14682b51f86ee5619e91952a4b22af1db6255`.
+- GitHub Actions latest run still fails before job steps are created; job output reports `steps: null`, `logs_url: null`. No source test/build result is available and none is claimed.
