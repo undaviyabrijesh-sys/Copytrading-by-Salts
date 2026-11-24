@@ -92,6 +92,7 @@ export function evaluatePaperRouting(input: {
     if (!destinationInstrumentCheck.valid) return { eligible: false, code: destinationInstrumentCheck.code, reason: destinationInstrumentCheck.reason };
     if (["MODIFY_ORDER", "CANCEL", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.targetOrderId) return { eligible: false, code: "TARGET_ORDER_REQUIRED", reason: "This management event must reference the exact source order; ambiguous order matching is not allowed." };
     if (signal.event === "PARTIAL_EXIT") {
+      if (!dest.capabilities.supportsOrderEvents) return { eligible: false, code: "ORDER_EVENTS_UNSUPPORTED", reason: "Destination adapter cannot safely process order lifecycle events." };
       if (!signal.quantity || !isPositiveDecimal(signal.quantity)) return { eligible: false, code: "PARTIAL_EXIT_QUANTITY_REQUIRED", reason: "Partial exits require an explicit positive quantity." };
       if (!dest.capabilities.supportsPartialFills) return { eligible: false, code: "PARTIAL_EXIT_UNSUPPORTED", reason: "Destination adapter has not certified partial-exit support." };
       if (!dest.openPositionQuantity || !isPositiveDecimal(dest.openPositionQuantity)) return { eligible: false, code: "OPEN_POSITION_QUANTITY_UNKNOWN", reason: "Partial exit is blocked until the exact copied position quantity is reconciled." };
