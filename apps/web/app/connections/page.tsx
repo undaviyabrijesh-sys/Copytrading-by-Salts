@@ -60,6 +60,7 @@ export default function ConnectionsPage() {
   const [query,setQuery] = useState("");
   const [credentials,setCredentials] = useState<Record<string,string>>({});
   const [saving,setSaving] = useState(false);
+  const [verifyingId,setVerifyingId] = useState<string | null>(null);
   const [connectionMessage,setConnectionMessage] = useState("");
   const [connections,setConnections] = useState<Connection[]>([]);
   async function loadConnections() {
@@ -71,6 +72,19 @@ export default function ConnectionsPage() {
     const data=await response.json().catch(()=>({}));
     if(!response.ok){setConnectionMessage(data.error ?? "Unable to disconnect account.");return;}
     await loadConnections();
+  }
+  async function verifyConnection(id:string) {
+    setVerifyingId(id); setConnectionMessage("");
+    try {
+      const response=await fetch(`/api/v1/brokers/connections/${id}/verify`,{method:"POST",credentials:"include",headers:{"content-type":"application/json"}});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data.error ?? "Unable to verify broker connection.");
+      setConnectionMessage(data.message ?? "Broker authentication verified.");
+      await loadConnections();
+    } catch(error) {
+      setConnectionMessage(error instanceof Error ? error.message : "Unable to verify broker connection.");
+      await loadConnections();
+    } finally { setVerifyingId(null); }
   }
   const list = useMemo(()=>BROKERS.filter(b=>b.market===market && (b.name.toLowerCase().includes(query.toLowerCase()) || b.id.toLowerCase().includes(query.toLowerCase()))),[market,query]);
   const broker = BROKERS.find(b=>b.id===selected && b.market===market) ?? list[0];
@@ -117,7 +131,7 @@ export default function ConnectionsPage() {
   return <main className="admin-wrap">
     <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">ACCOUNT WORKSPACE · BROKER CONNECTIONS</p><h1>Connect a broker</h1><p className="sub">Every user connects their own account. India and Crypto credentials are stored and routed separately.</p></div><div className="header-actions"><a className="text-link" href="/security">Security / MFA</a><a className="text-link" href="/">← Overview</a><LogoutButton /></div></header>
     <div className="market-switch"><button className={market==="INDIA"?"market selected":"market"} onClick={()=>{setMarket("INDIA");setSelected("ZERODHA");setCredentials({});setConnectionMessage("");}}>India brokers</button><button className={market==="CRYPTO"?"market selected":"market"} onClick={()=>{setMarket("CRYPTO");setSelected("DELTA_INDIA");setCredentials({});setConnectionMessage("");}}>Crypto exchanges</button></div>
-    <section className="card"><div className="section-head"><div><h2>Your broker accounts</h2><p className="sub">Connection records are private to your login. A host's credentials are never visible to subscribers, and subscriber accounts are never shared with hosts.</p></div><span className="pill">KMS vault required</span></div><p className="sub">API-token connections are submitted only to the server-side AWS KMS envelope vault. If the managed vault is not configured, the API rejects the request without storing credentials. Credential intake is available only for providers with a verified field contract; research-only providers remain disabled. Provider authentication and order routing are separate verification stages.</p>{connections.length===0 ? <p className="sub">No broker connection records yet.</p> : <div className="table-wrap"><table><thead><tr><th>Provider</th><th>Workspace</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>{connections.map(connection=><tr key={connection.id}><td>{connection.provider} · {connection.label}</td><td>{connection.market}</td><td>{connection.status}</td><td>{new Date(connection.createdAt).toLocaleString()}</td><td><button className="quiet-button" onClick={()=>void removeConnection(connection.id)}>Disconnect</button></td></tr>)}</tbody></table></div>}<a className="text-link" href="/security">Manage authenticator MFA →</a><br/><a className="text-link" href="/marketplace">Continue to marketplace →</a></section>
+    <section className="card"><div className="section-head"><div><h2>Your broker accounts</h2><p className="sub">Connection records are private to your login. A host's credentials are never visible to subscribers, and subscriber accounts are never shared with hosts.</p></div><span className="pill">KMS vault required</span></div><p className="sub">API-token connections are submitted only to the server-side AWS KMS envelope vault. If the managed vault is not configured, the API rejects the request without storing credentials. Credential intake is available only for providers with a verified field contract; research-only providers remain disabled. Provider authentication and order routing are separate verification stages. Delta Exchange India now has a signed read-only account verification action; other brokers remain pending provider-specific authentication implementation.</p>{connections.length===0 ? <p className="sub">No broker connection records yet.</p> : <div className="table-wrap"><table><thead><tr><th>Provider</th><th>Workspace</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>{connections.map(connection=><tr key={connection.id}><td>{connection.provider} · {connection.label}</td><td>{connection.market}</td><td>{connection.status}</td><td>{new Date(connection.createdAt).toLocaleString()}</td><td>{connection.provider==="DELTA_INDIA" && connection.status!=="CONNECTED" && <button className="quiet-button" disabled={verifyingId===connection.id} onClick={()=>void verifyConnection(connection.id)}>{verifyingId===connection.id?"Verifying…":"Verify account"}</button>} <button className="quiet-button" onClick={()=>void removeConnection(connection.id)}>Disconnect</button></td></tr>)}</tbody></table></div>}<a className="text-link" href="/security">Manage authenticator MFA →</a><br/><a className="text-link" href="/marketplace">Continue to marketplace →</a></section>
     <section className="card">
       <div className="section-head"><div><h2>Choose provider</h2><p className="sub">{market==="INDIA"?"Indian broker integrations":"Crypto exchange integrations"}</p></div><span className="pill">{list.length} researched</span></div>
       <input aria-label="Search providers" placeholder="Search broker or exchange…" value={query} onChange={e=>setQuery(e.target.value)} />
