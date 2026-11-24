@@ -20,8 +20,8 @@ This branch starts Phase 1 foundations only. It does not yet connect to a live b
 2. Copy `.env.example` to `.env` and replace local-only values if needed.
 3. Run `docker compose up -d`.
 4. Run `pnpm install`.
-5. Generate and apply the database schema: `pnpm --filter @salts/database db:generate` then `pnpm --filter @salts/database db:migrate:deploy`.
-6. Run `pnpm dev`. The API predev hook builds the shared Prisma client package before startup.
+5. Generate and apply the database schema: `dotenv -e .env -- pnpm --filter @salts/database db:generate` then `dotenv -e .env -- pnpm --filter @salts/database db:migrate:deploy`.
+6. Run `pnpm dev`. Root scripts load `.env`; the API predev hook builds the shared Prisma client package before startup.
 
 ## Safety boundaries
 
