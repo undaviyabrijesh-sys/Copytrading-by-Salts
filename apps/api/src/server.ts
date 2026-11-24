@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { registerPlatformRoutes } from "./routes/platform.js";
 
 const app = Fastify({ logger: true, trustProxy: false });
 
@@ -16,6 +17,8 @@ app.get("/api/v1/platform", async () => ({
   executionMode: "PAPER_ONLY",
   liveTradingEnabled: false
 }));
+
+await registerPlatformRoutes(app);
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
