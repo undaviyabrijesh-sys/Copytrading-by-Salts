@@ -83,7 +83,7 @@ export function evaluatePaperRouting(input: {
 
   if (!isEntry) {
     if (!dest.instrumentMapped || !dest.destinationInstrument || dest.destinationInstrument.market !== dest.market) return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "Existing position management requires a verified destination instrument mapping." };
-    if (signal.orderType && !dest.capabilities.orderTypes.includes(signal.orderType)) return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: "Destination adapter does not support the management order type." };
+    if (["PLACE_STOP_LOSS", "MODIFY_STOP_LOSS", "PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.orderType) return { eligible: false, code: "MANAGEMENT_ORDER_TYPE_REQUIRED", reason: "Stop and take-profit events require an explicit canonical order type." };\n    if (signal.orderType && !dest.capabilities.orderTypes.includes(signal.orderType)) return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: "Destination adapter does not support the management order type." };
     if (!dest.capabilities.supportsOrderEvents) return { eligible: false, code: "ORDER_EVENTS_UNSUPPORTED", reason: "Destination adapter cannot safely process order lifecycle events." };
     if (["CANCEL", "CANCEL_STOP_LOSS", "CANCEL_TAKE_PROFIT"].includes(signal.event) && !dest.capabilities.supportsCancel) return { eligible: false, code: "CANCEL_UNSUPPORTED", reason: "Destination adapter does not support cancellation." };
     if (["MODIFY_ORDER", "MODIFY_STOP_LOSS", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !dest.capabilities.supportsModify) {
