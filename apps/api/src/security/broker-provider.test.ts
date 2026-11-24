@@ -23,7 +23,7 @@ test("Dhan, Delta and Groww expose their documented static credential fields", (
   assert.equal(delta?.market, "CRYPTO");
   assert.deepEqual(delta?.fields.map(field => field.key), ["apiKey", "apiSecret"]);
   assert.equal(dhan?.market, "INDIA");
-  assert.deepEqual(dhan?.fields.map(field => field.key), ["apiKey", "apiSecret"]);
+  assert.deepEqual(dhan?.fields.map(field => field.key), ["clientId", "apiKey", "apiSecret"]);
   assert.equal(groww?.market, "INDIA");
   assert.deepEqual(groww?.fields.map(field => field.key), ["accessToken"]);
 });
