@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "../../components/logout-button.js";
 import { FormEvent, useEffect, useState } from "react";
 
 type Listing = { id: string; market: "INDIA" | "CRYPTO"; title: string; description: string; riskDisclosure: string; status: string; updatedAt: string };
@@ -71,7 +72,7 @@ export default function HostDeskPage() {
   }
 
   return <main className="admin-wrap">
-    <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">HOST WORKSPACE · PAPER ONLY</p><h1>My listings</h1><p className="sub">Create and manage strategy listings. Publishing does not enable live execution.</p></div><a className="text-link" href="/">← Overview</a></header>
+    <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">HOST WORKSPACE · PAPER ONLY</p><h1>My listings</h1><p className="sub">Create and manage strategy listings. Publishing does not enable live execution.</p></div><div className="header-actions"><a className="text-link" href="/">← Overview</a><LogoutButton /></div></header>
     <section className="card"><h2>{editingId ? "Edit listing" : "Create a host listing"}</h2><p className="sub">Your listing is scoped to your account. Subscribers choose their own broker and risk settings.</p>
       <form className="auth-form" onSubmit={editingId ? saveEdit : create}>
         <label>Market<select disabled={!!editingId} value={market} onChange={e => setMarket(e.target.value as "INDIA" | "CRYPTO")}><option value="INDIA">India</option><option value="CRYPTO">Crypto</option></select></label>
