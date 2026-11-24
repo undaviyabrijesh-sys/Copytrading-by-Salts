@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertMarketMatch, isOrderTypeSupported, type AdapterCapabilities } from "./index.ts";
+import { assertMarketMatch, isOrderTypeSupported, type AdapterCapabilities } from "./index.js";
 
 const capabilities: AdapterCapabilities = {
   market: "INDIA",
