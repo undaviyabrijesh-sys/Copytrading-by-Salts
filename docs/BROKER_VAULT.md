@@ -22,7 +22,7 @@ No AWS resources have been provisioned. No spend has been incurred by this code 
 ## Current API behavior
 
 - GET /api/v1/brokers/providers returns sanitized provider auth metadata and the exact fields supported by the credential endpoint.
-- POST /api/v1/brokers/connections requires an authenticated user, trusted Origin, rate limit and exact provider-specific credential keys. It encrypts credentials before writing a tenant-owned BrokerConnection record.
+- POST /api/v1/brokers/connections requires an authenticated user, trusted Origin, rate limit, recent authenticator MFA and exact provider-specific credential keys. It encrypts credentials before writing a tenant-owned BrokerConnection record.
 - Only DhanHQ access token, Groww access token and Delta Exchange India API key/secret currently accept credentials. All three remain PENDING and are not executable until a provider-specific account identity, permissions and health test is implemented.
 - OAuth-based providers (Zerodha, Angel One, Upstox, FYERS, Shoonya, Flattrade, 5paisa, ICICI Breeze, Alice Blue) deliberately reject generic credential submission. Their OAuth state/callback/token-exchange flows must be implemented individually.
 - DELETE /api/v1/brokers/connections/:connectionId is tenant-scoped; subscriptions using that destination are paused and detached before deletion.
