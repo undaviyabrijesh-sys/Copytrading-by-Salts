@@ -70,7 +70,7 @@ export function evaluatePaperRouting(input: {
 
   if (sub.hostUserId !== signal.hostUserId) return { eligible: false, code: "HOST_SUBSCRIPTION_MISMATCH", reason: "Signal host does not match the subscribed host." };
   if (sub.subscriberId !== dest.ownerUserId) return { eligible: false, code: "TENANT_MISMATCH", reason: "Destination broker connection does not belong to this subscriber." };
-  if (sub.market !== signal.market || signal.market !== dest.market || dest.capabilities.market !== dest.market) {
+  if (sub.market !== signal.market || signal.market !== signal.instrument.market || signal.market !== dest.market || dest.capabilities.market !== dest.market) {
     return { eligible: false, code: "MARKET_MISMATCH", reason: "India and Crypto routing are isolated; all source and destination markets must match." };
   }
   if (sub.mode !== "PAPER" || dest.mode !== "PAPER") return { eligible: false, code: "PAPER_MODE_REQUIRED", reason: "Only paper-mode routing is enabled." };
@@ -90,6 +90,7 @@ export function evaluatePaperRouting(input: {
     if (!dest.instrumentMapped || !dest.destinationInstrument || dest.destinationInstrument.market !== dest.market) return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "Existing position management requires a verified destination instrument mapping." };
     const destinationInstrumentCheck = validateCanonicalInstrument(dest.destinationInstrument);
     if (!destinationInstrumentCheck.valid) return { eligible: false, code: destinationInstrumentCheck.code, reason: destinationInstrumentCheck.reason };
+    if (!dest.capabilities.segments.includes(dest.destinationInstrument.segment)) return { eligible: false, code: "DESTINATION_SEGMENT_UNSUPPORTED", reason: "Destination broker does not support the mapped management instrument segment." };
     if (["MODIFY_ORDER", "CANCEL", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.targetOrderId) return { eligible: false, code: "TARGET_ORDER_REQUIRED", reason: "This management event must reference the exact source order; ambiguous order matching is not allowed." };
     if (signal.event === "PARTIAL_EXIT") {
       if (!dest.capabilities.supportsOrderEvents) return { eligible: false, code: "ORDER_EVENTS_UNSUPPORTED", reason: "Destination adapter cannot safely process order lifecycle events." };
