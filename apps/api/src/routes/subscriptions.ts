@@ -27,6 +27,7 @@ export async function registerSubscriptionRoutes(app: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    assertTrustedOrigin(request);
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     const { listingId } = request.params as { listingId: string };
@@ -57,6 +58,7 @@ export async function registerSubscriptionRoutes(app: FastifyInstance) {
   });
 
   app.delete("/api/v1/subscriptions/:subscriptionId", async (request, reply) => {
+    assertTrustedOrigin(request);
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     const { subscriptionId } = request.params as { subscriptionId: string };
