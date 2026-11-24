@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";\nimport { Prisma } from "@prisma/client";
 import { prisma } from "@salts/database/client";
 import { assertTrustedOrigin, currentUser } from "./auth.js";
 
