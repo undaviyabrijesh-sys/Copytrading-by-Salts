@@ -6,7 +6,7 @@ type UserRow = { id: string; email: string; displayName: string; status: string;
 type InviteRow = { id: string; expiresAt: string; usedAt: string | null; revokedAt: string | null; createdAt: string };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, credentials: "include", headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
+  const headers = new Headers(init?.headers);\n  headers.set("content-type", "application/json");\n  const response = await fetch(path, { ...init, credentials: "include", headers });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(data.error ?? "Request failed."), { status: response.status });
   return data as T;
