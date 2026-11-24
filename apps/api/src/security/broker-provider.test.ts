@@ -2,32 +2,35 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { credentialProviders } from "../providers/credential-providers.js";
 
-test("every listed broker has a secure credential-intake schema", () => {
+test("only providers with an explicit field contract accept credential intake", () => {
   assert.ok(credentialProviders.length >= 40);
-  assert.ok(credentialProviders.every(provider => provider.connectEnabled && provider.fields.length > 0));
-  const allowed = ["accessToken", "apiKey", "apiSecret", "clientId", "clientSecret"];
+  const enabled = credentialProviders.filter(provider => provider.connectEnabled);
+  assert.deepEqual(enabled.map(provider => provider.id).sort(), [
+    "ALICE_BLUE", "ANGEL_ONE", "DELTA_INDIA", "DHAN", "FIVE_PAISA", "FLATTRADE",
+    "FYERS", "GROWW", "ICICI_BREEZE", "SHOONYA", "UPSTOX", "ZERODHA"
+  ].sort());
   for (const provider of credentialProviders) {
-    assert.ok(provider.fields.every(field => allowed.includes(field.key)));
     assert.equal(new Set(provider.fields.map(field => field.key)).size, provider.fields.length);
+    if (!provider.connectEnabled) assert.equal(provider.fields.length, 0);
+    if (provider.connectEnabled) assert.ok(provider.fields.length > 0);
   }
 });
 
-test("known token/key providers retain their exact provider-specific fields", () => {
+test("Dhan, Delta and Groww expose their documented static credential fields", () => {
   const delta = credentialProviders.find(provider => provider.id === "DELTA_INDIA");
   const dhan = credentialProviders.find(provider => provider.id === "DHAN");
   const groww = credentialProviders.find(provider => provider.id === "GROWW");
   assert.equal(delta?.market, "CRYPTO");
   assert.deepEqual(delta?.fields.map(field => field.key), ["apiKey", "apiSecret"]);
   assert.equal(dhan?.market, "INDIA");
-  assert.deepEqual(dhan?.fields.map(field => field.key), ["accessToken"]);
+  assert.deepEqual(dhan?.fields.map(field => field.key), ["apiKey", "apiSecret"]);
   assert.equal(groww?.market, "INDIA");
   assert.deepEqual(groww?.fields.map(field => field.key), ["accessToken"]);
 });
 
-test("unverified providers accept intake fields without being marked connected or execution-ready", () => {
-  const unverified = credentialProviders.filter(provider => !["DELTA_INDIA", "DHAN", "GROWW"].includes(provider.id));
-  assert.ok(unverified.length >= 35);
-  assert.ok(unverified.every(provider => provider.fields.length > 0));
-  assert.ok(unverified.every(provider => provider.note.toLowerCase().includes("credential") || provider.note.toLowerCase().includes("intake")));
-  assert.ok(unverified.every(provider => provider.auth === "OAUTH"));
+test("research-only providers have no credential intake or execution readiness", () => {
+  const research = credentialProviders.filter(provider => !provider.connectEnabled);
+  assert.ok(research.length >= 25);
+  assert.ok(research.every(provider => provider.fields.length === 0));
+  assert.ok(research.every(provider => provider.note.toLowerCase().includes("disabled") || provider.note.toLowerCase().includes("research")));
 });
