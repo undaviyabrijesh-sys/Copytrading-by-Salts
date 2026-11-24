@@ -196,7 +196,7 @@ model HostSubscription {
 
 model Signal {
   id              String @id @default(cuid())
-  idempotencyKey  String @unique
+  idempotencyKey  String
   hostUserId      String
   hostConnectionId String
   market          Market
@@ -207,6 +207,7 @@ model Signal {
   receivedAt      DateTime @default(now())
   copyOrders      CopyOrder[]
   copyIntents     CopyIntent[]
+  @@unique([hostUserId, idempotencyKey])
   @@index([hostUserId, market, occurredAt])
 }
 
