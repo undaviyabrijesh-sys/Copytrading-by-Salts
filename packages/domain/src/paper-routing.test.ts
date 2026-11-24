@@ -88,3 +88,29 @@ test("fails closed when risk snapshot is malformed", () => {
   assert.equal(result.eligible, false);
   if (!result.eligible) assert.equal(result.code, "INVALID_RISK_SNAPSHOT");
 });
+
+
+test("blocks destination segments absent from the broker capability set", () => {
+  const result = evaluatePaperRouting({ subscription, signal, destination: { ...destination, capabilities: { ...capabilities, segments: ["SPOT"] } } });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "DESTINATION_SEGMENT_UNSUPPORTED");
+});
+
+test("requires exact source order references for modifications and cancellations", () => {
+  const modify = { ...signal, event: "MODIFY_ORDER" as const };
+  const result = evaluatePaperRouting({ subscription, signal: modify, destination: { ...destination, linkedPositionExists: true } });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "TARGET_ORDER_REQUIRED");
+  const valid = evaluatePaperRouting({ subscription, signal: { ...modify, targetOrderId: "source-order-17" }, destination: { ...destination, linkedPositionExists: true } });
+  assert.equal(valid.eligible, true);
+});
+
+test("requires explicit quantity and partial-fill capability for partial exits", () => {
+  const partial = { ...signal, event: "PARTIAL_EXIT" as const, quantity: undefined };
+  const missingQty = evaluatePaperRouting({ subscription, signal: partial, destination: { ...destination, linkedPositionExists: true } });
+  assert.equal(missingQty.eligible, false);
+  if (!missingQty.eligible) assert.equal(missingQty.code, "PARTIAL_EXIT_QUANTITY_REQUIRED");
+  const unsupported = evaluatePaperRouting({ subscription, signal: { ...signal, event: "PARTIAL_EXIT" as const, quantity: "0.25" }, destination: { ...destination, linkedPositionExists: true, capabilities: { ...capabilities, supportsPartialFills: false } } });
+  assert.equal(unsupported.eligible, false);
+  if (!unsupported.eligible) assert.equal(unsupported.code, "PARTIAL_EXIT_UNSUPPORTED");
+});
