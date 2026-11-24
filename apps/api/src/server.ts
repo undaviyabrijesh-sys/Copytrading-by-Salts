@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
+import helmet from "@fastify/helmet";
 import { prisma } from "@salts/database/client";
 import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -7,7 +8,16 @@ import { registerHostRoutes } from "./routes/host.js";
 import { registerSubscriptionRoutes } from "./routes/subscriptions.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 
-const app = Fastify({ logger: true, trustProxy: false });
+const app = Fastify({
+  logger: {
+    redact: {
+      paths: ["req.headers.authorization", "req.headers.cookie", "req.headers[\"x-api-key\"]"],
+      censor: "[REDACTED]"
+    }
+  },
+  trustProxy: false,
+  bodyLimit: 1024 * 1024
+});
 
 app.get("/health/live", async () => ({ status: "ok" }));
 
@@ -28,6 +38,7 @@ app.get("/api/v1/platform", async () => ({
   liveTradingEnabled: false
 }));
 
+await app.register(helmet, { contentSecurityPolicy: false });
 await app.register(rateLimit, { global: false });
 await registerPlatformRoutes(app);
 await registerAuthRoutes(app);
