@@ -3,14 +3,15 @@
   "private": true,
   "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "typecheck": "turbo typecheck",
-    "test": "turbo test"
+    "dev": "dotenv -e .env -- turbo dev",
+    "build": "dotenv -e .env -- turbo build",
+    "lint": "dotenv -e .env -- turbo lint",
+    "typecheck": "dotenv -e .env -- turbo typecheck",
+    "test": "dotenv -e .env -- turbo test"
   },
   "devDependencies": {
     "turbo": "^2.5.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "dotenv-cli": "^8.0.0"
   }
 }
