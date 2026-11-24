@@ -73,6 +73,12 @@ Canonical instrument validation now rejects malformed contract identity, invalid
 Tests have been added for these rules but remain unexecuted/unverified due the GitHub Actions job-initialization failure (no steps/logs). No broker execution adapter or live trading capability is introduced by these changes.
 
 
+## Dhan credential contract correction — 24 November 2026
+
+- Corrected Dhan's credential form contract to collect the Dhan client ID plus the app ID and app secret that the official individual-consent API expects as `app_id` and `app_secret` headers. Internal keys are now `clientId`, `appId` and `appSecret`; labels identify the actual Dhan API terms.
+- Corrected the provider note: Dhan is currently credential-intake-only. Its individual consent start, callback correlation and access-token exchange are not implemented, so the form must not imply that saving credentials can authenticate or connect the account.
+- This is a contract/documentation correction only. No Dhan authentication or order execution has been enabled, and no build/test pass is claimed.
+
 ## Authenticated-user context correction — 24 November 2026
 
 - Fixed the authenticated request context used by API routes: `currentUser()` now selects and returns the account `status` field alongside the existing tenant-scoped identity fields.
