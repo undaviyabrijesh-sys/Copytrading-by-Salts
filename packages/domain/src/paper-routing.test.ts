@@ -140,3 +140,11 @@ test("blocks partial exits when broker order-event reconciliation is unavailable
   assert.equal(result.eligible, false);
   if (!result.eligible) assert.equal(result.code, "ORDER_EVENTS_UNSUPPORTED");
 });
+
+
+test("rejects source instruments whose market conflicts with the signal workspace", () => {
+  const mismatch = { ...signal, instrument: { ...instrument, market: "INDIA" as const } };
+  const result = evaluatePaperRouting({ subscription, signal: mismatch, destination });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "MARKET_MISMATCH");
+});
