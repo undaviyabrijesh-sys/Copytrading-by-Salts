@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "../../components/logout-button.js";
 import { useEffect, useState } from "react";
 
 type UserRow = { id: string; email: string; displayName: string; status: string; roles: string[]; totpEnabled: boolean; createdAt: string };
@@ -117,7 +118,7 @@ export default function AdminPage() {
   return <main className="admin-wrap">
     <header className="admin-header">
       <div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">OWNER CONTROL CENTRE</p><h1>Administration</h1><p className="sub">Invite-only access · tenant-isolated accounts · all privileged actions audited</p></div>
-      <a className="text-link" href="/">← Trading workspace</a>
+      <div className="header-actions"><a className="text-link" href="/">← Trading workspace</a><LogoutButton /></div>
     </header>
     {loading && <div className="card">Loading secure administrator workspace…</div>}
     {!loading && !authorized && <section className="card"><h2>Administrator sign-in required</h2><p className="sub">{error || "Sign in with your owner account."}</p><a className="primary-button inline-button" href="/login">Go to sign in</a></section>}
