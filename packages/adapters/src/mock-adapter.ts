@@ -16,7 +16,7 @@ export class MockPaperAdapter implements BrokerAdapter {
     };
   }
   async testConnection(_context: BrokerConnectionContext) {
-    return { ok: true, checks: { authentication: "PASS", permissions: "UNKNOWN", marketData: "UNKNOWN", orderRoute: "PAPER_ONLY" as "UNKNOWN" } };
+    return { ok: true, checks: { authentication: "PASS", permissions: "UNKNOWN", marketData: "UNKNOWN", orderRoute: "UNKNOWN" } };
   }
   async placeOrder(_context: BrokerConnectionContext, request: NormalizedOrderRequest): Promise<NormalizedOrderUpdate> {
     return { providerOrderId: `paper-${request.clientOrderId}`, clientOrderId: request.clientOrderId, status: "OPEN", filledQuantity: "0", occurredAt: new Date().toISOString() };
