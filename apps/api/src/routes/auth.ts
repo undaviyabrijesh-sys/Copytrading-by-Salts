@@ -3,11 +3,12 @@ import { randomBytes } from "node:crypto";
 import argon2 from "argon2";
 import { prisma } from "@salts/database/client";
 import { hashOpaqueToken, issueOpaqueToken } from "../security/opaque-tokens.js";
+import { decryptTotpSecret, newTotpSecret, totpProvisioningUri, verifyTotp } from "../security/totp.js";
 
 const SESSION_COOKIE = "salts_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-type SafeUser = { id: string; email: string; displayName: string; roles: string[]; totpEnabled: boolean };
+type SafeUser = { id: string; email: string; displayName: string; roles: string[]; totpEnabled: boolean; sessionId: string; mfaVerifiedAt: Date | null };
 
 function cookieValue(header: string | undefined, name: string): string | null {
   if (!header) return null;
@@ -44,17 +45,17 @@ export async function currentUser(request: FastifyRequest): Promise<SafeUser | n
   try { tokenHash = hashOpaqueToken(token); } catch { return null; }
   const session = await prisma.session.findFirst({
     where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() }, user: { status: "ACTIVE" } },
-    select: { id: true, user: { select: { id: true, email: true, displayName: true, roles: true, totpEnabled: true } } }
+    select: { id: true, mfaVerifiedAt: true, user: { select: { id: true, email: true, displayName: true, roles: true, totpEnabled: true } } }
   });
   if (!session) return null;
   void prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
-  return session.user;
+  return { ...session.user, sessionId: session.id, mfaVerifiedAt: session.mfaVerifiedAt };
 }
 
-async function createSession(userId: string, reply: FastifyReply) {
+async function createSession(userId: string, reply: FastifyReply, mfaVerifiedAt: Date | null = null) {
   const issued = issueOpaqueToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  await prisma.session.create({ data: { userId, tokenHash: issued.tokenHash, expiresAt } });
+  await prisma.session.create({ data: { userId, tokenHash: issued.tokenHash, expiresAt, mfaVerifiedAt } });
   setSessionCookie(reply, issued.token, expiresAt);
 }
 
@@ -68,7 +69,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     } }
   }, async (request, reply) => {
     assertTrustedOrigin(request);
-    const body = request.body as { email: string; password: string };
+    const body = request.body as { email: string; password: string; totpCode?: string };
     const email = body.email.trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || user.status !== "ACTIVE" || !(await argon2.verify(user.passwordHash, body.password))) {
@@ -90,7 +91,57 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  app.get("/api/v1/auth/me", async (request, reply) => {
+
+  app.post("/api/v1/auth/mfa/enroll", async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    if (actor.totpEnabled) return reply.code(409).send({ error: "MFA is already enabled." });
+    const generated = newTotpSecret();
+    await prisma.user.update({ where: { id: actor.id }, data: { totpSecretEncrypted: generated.encrypted } });
+    return {
+      setupRequired: true,
+      secret: generated.secret,
+      provisioningUri: totpProvisioningUri(generated.secret, actor.email),
+      instruction: "Add this account to an authenticator app, then confirm with the current six-digit code. This secret is shown only once."
+    };
+  });
+
+  app.post("/api/v1/auth/mfa/verify-enrollment", {
+    schema: { body: { type: "object", additionalProperties: false, required: ["code"], properties: { code: { type: "string", pattern: "^[0-9]{6}$" } } } }
+  }, async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    const body = request.body as { code: string };
+    const user = await prisma.user.findUnique({ where: { id: actor.id }, select: { totpSecretEncrypted: true, totpEnabled: true } });
+    if (!user?.totpSecretEncrypted || user.totpEnabled || !verifyTotp(decryptTotpSecret(user.totpSecretEncrypted), body.code)) {
+      return reply.code(400).send({ error: "Authenticator code is invalid or enrollment is not pending." });
+    }
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: actor.id }, data: { totpEnabled: true } }),
+      prisma.session.update({ where: { id: actor.sessionId }, data: { mfaVerifiedAt: now } })
+    ]);
+    return { ok: true, mfaEnabled: true };
+  });
+
+  app.post("/api/v1/auth/mfa/verify-session", {
+    schema: { body: { type: "object", additionalProperties: false, required: ["code"], properties: { code: { type: "string", pattern: "^[0-9]{6}$" } } } }
+  }, async (request, reply) => {
+    assertTrustedOrigin(request);
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    const body = request.body as { code: string };
+    const user = await prisma.user.findUnique({ where: { id: actor.id }, select: { totpSecretEncrypted: true, totpEnabled: true } });
+    if (!user?.totpEnabled || !user.totpSecretEncrypted || !verifyTotp(decryptTotpSecret(user.totpSecretEncrypted), body.code)) {
+      return reply.code(401).send({ error: "Authenticator code is invalid." });
+    }
+    const verifiedAt = new Date();
+    await prisma.session.update({ where: { id: actor.sessionId }, data: { mfaVerifiedAt: verifiedAt } });
+    return { ok: true, mfaVerifiedAt: verifiedAt };
+  });
+\n  app.get("/api/v1/auth/me", async (request, reply) => {
     const user = await currentUser(request);
     if (!user) return reply.code(401).send({ error: "Authentication required." });
     return { user };
@@ -107,7 +158,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     if (!actor.roles.includes("ADMIN")) return reply.code(403).send({ error: "Administrator permission required." });
-    if (!actor.totpEnabled) return reply.code(403).send({ error: "MFA enrollment is required before administrator actions are enabled." });
+    if (!actor.totpEnabled || !actor.mfaVerifiedAt || Date.now() - actor.mfaVerifiedAt.getTime() > 10 * 60 * 1000) return reply.code(403).send({ error: "Recent MFA verification is required for administrator actions." });
     const body = (request.body ?? {}) as { expiresInDays?: number };
     const expiresInDays = body.expiresInDays ?? 7;
     const issued = issueOpaqueToken();
