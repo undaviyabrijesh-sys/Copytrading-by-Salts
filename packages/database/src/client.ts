@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";\nexport { Prisma };
+import { Prisma, PrismaClient } from "@prisma/client";
+export { Prisma };
 
 const globalForPrisma = globalThis as unknown as { saltsPrisma?: PrismaClient };
 
