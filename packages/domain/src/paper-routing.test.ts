@@ -148,3 +148,11 @@ test("rejects source instruments whose market conflicts with the signal workspac
   assert.equal(result.eligible, false);
   if (!result.eligible) assert.equal(result.code, "MARKET_MISMATCH");
 });
+
+
+test("rejects zero or invalid partial-exit sizing multipliers", () => {
+  const partial = { ...signal, event: "PARTIAL_EXIT" as const, quantity: "1" };
+  const zero = evaluatePaperRouting({ subscription: { ...subscription, settings: { ...subscription.settings, quantityMultiplier: 0 } }, signal: partial, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "1" } });
+  assert.equal(zero.eligible, false);
+  if (!zero.eligible) assert.equal(zero.code, "INVALID_PARTIAL_EXIT_SIZING");
+});
