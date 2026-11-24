@@ -28,3 +28,11 @@ test("accepts supported, mapped and valid quantity", () => {
   const result = evaluateCopyRequest({sourceMarket:"INDIA",destinationMarket:"INDIA",instrumentMapped:true,destinationInstrument:instrument,orderType:"LIMIT",quantity:"2",capabilities:caps});
   assert.equal(result.eligible,true);
 });
+
+
+test("rejects a destination segment the adapter has not declared", () => {
+  const otherSegment = { ...instrument, segment: "BSE_EQ" };
+  const result = evaluateCopyRequest({ sourceMarket:"INDIA", destinationMarket:"INDIA", instrumentMapped:true, destinationInstrument:otherSegment, orderType:"MARKET", quantity:"1", capabilities:caps });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "DESTINATION_SEGMENT_UNSUPPORTED");
+});
