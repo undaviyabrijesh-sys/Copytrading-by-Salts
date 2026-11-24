@@ -106,3 +106,5 @@ td small { display:block; color:#8fa4c2; margin-top:5px; }
 .risk-fields input { width:100%; min-width:0; border:1px solid #344762; border-radius:8px; background:#0b1422; color:var(--text); padding:10px; }
 @media(max-width:800px) { .risk-settings { grid-template-columns:1fr; } }
 @media(max-width:560px) { .risk-fields { grid-template-columns:1fr; } }
+
+.header-actions { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
