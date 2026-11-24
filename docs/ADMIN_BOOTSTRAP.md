@@ -15,6 +15,7 @@ The platform supports multiple independent user accounts. The first administrato
 1. Apply the reviewed Prisma migration to the production database.
 2. In a secure deployment shell or one-time task, set:
    - `DATABASE_URL`
+   - `MFA_ENCRYPTION_KEY` (unique base64-encoded 32-byte key, stored in AWS Secrets Manager in production)
    - `ADMIN_BOOTSTRAP_EMAIL`
    - `ADMIN_BOOTSTRAP_PASSWORD` (at least 16 characters)
    - `ADMIN_BOOTSTRAP_TOKEN`
@@ -22,7 +23,7 @@ The platform supports multiple independent user accounts. The first administrato
    - Optional `ADMIN_BOOTSTRAP_DISPLAY_NAME`
 3. Run `pnpm --filter @salts/database admin:bootstrap`.
 4. Remove all bootstrap variables from the runtime/secret store immediately. Never commit them or send them in chat.
-5. Confirm the account can sign in after the authentication endpoints and UI are deployed; enforce MFA before enabling privileged admin actions.
+5. Sign in, enroll an authenticator using the MFA setup endpoint, confirm the six-digit code, and verify a fresh MFA challenge before using administrator actions.
 
 The bootstrap command is not a login endpoint and does not expose a public way to create administrators. Do not run it against a shared or production database until migrations, backups, and the secure operator environment are ready.
 
@@ -34,4 +35,4 @@ Admin status does **not** grant permission to view another user's plaintext brok
 
 ## Current implementation status
 
-The database schema now includes revocable sessions stored as token hashes, and a one-time owner bootstrap command. Public registration, invite redemption, login/logout, MFA enrollment/challenge, session rotation, role-guarded admin APIs, and the admin UI are still pending. The initial admin account cannot be created until a database is provisioned and migrated.
+The database schema includes revocable sessions stored as token hashes and encrypted TOTP secrets. Invite-only redemption, login/logout, MFA enrollment/challenge and role-guarded admin APIs are implemented in the API branch. Admin UI, database migration, production deployment and end-to-end verification remain pending. The initial admin account cannot be created until a database is provisioned and migrated.
