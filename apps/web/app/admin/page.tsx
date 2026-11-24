@@ -80,7 +80,7 @@ export default function AdminPage() {
     setError("");
     try {
       const data = await api<{ invite: { token: string } }>("/api/v1/admin/invites", { method: "POST", body: "{}" });
-      setInviteLink(`${window.location.origin}/invite?token=${encodeURIComponent(data.invite.token)}`);
+      setInviteLink(`${window.location.origin}/invite#token=${encodeURIComponent(data.invite.token)}`);
       await load();
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to create invite."); }
   }
