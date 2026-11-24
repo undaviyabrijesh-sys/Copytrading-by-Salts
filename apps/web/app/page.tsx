@@ -17,7 +17,7 @@ export default function Home() {
         <a className="nav-item" href="/host">My host listings</a>
         <div className="nav-title">ACCOUNT</div>
         <a className="nav-item" href="/marketplace">Subscriptions</a>
-        <a className="nav-item" href="#connections">Broker connections</a>
+        <a className="nav-item" href="/connections">Broker connections</a>
         <a className="nav-item" href="#settings">Copy settings</a>
         <a className="nav-item" href="#activity">Copy activity</a>
         <div className="nav-title">CONTROL</div>
@@ -50,8 +50,8 @@ export default function Home() {
         </section>
 
         <section id="connections" className="section card">
-          <div className="section-head"><h2>Broker connection centre</h2><span className="pill">Guided setup planned</span></div>
-          <div className="listing"><div><strong>Broker connection centre</strong><p>Broker connection wizard is still under development. Do not paste credentials into this page.</p></div><span className="status">COMING IN PHASE 1</span></div>
+          <div className="section-head"><h2>Broker connection centre</h2><a className="text-link" href="/connections">Open provider catalogue →</a></div>
+          <div className="listing"><div><strong>Provider-specific setup guides</strong><p>Review each broker's authentication method, required API fields, official documentation, token expiry and static-IP restrictions before connecting.</p><a className="text-link" href="/connections">Choose a broker →</a></div><span className="status">RESEARCH CATALOGUE</span></div>
         </section>
 
         <div id="safety" className="notice">Safety notice: this is an early development shell, not a live trading product. No broker is connected and no order can be placed. Never enter API credentials into this preview.</div>
