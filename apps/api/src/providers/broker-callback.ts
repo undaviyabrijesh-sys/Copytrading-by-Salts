@@ -27,6 +27,6 @@ export function buildBrokerCallbackUri(apiBase: string, provider: string): strin
     throw new Error("BROKER_CALLBACK_BASE_MUST_BE_PUBLIC_HTTPS");
   }
 
-  const prefix = base.pathname.replace(/\\/+$/, "");
+  const prefix = base.pathname.replace(/\/+$/, "");
   return `${base.origin}${prefix}/api/v1/brokers/oauth/${normalizedProvider.toLowerCase()}/callback`;
 }
