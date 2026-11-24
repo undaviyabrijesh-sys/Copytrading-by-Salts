@@ -36,7 +36,7 @@ export function evaluateCopyRequest(request: CopyRequest): CopyEligibility {
   if (!isOrderTypeSupported(request.orderType, request.capabilities)) {
     return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: `Destination broker does not support ${request.orderType} for this account capability set.` };
   }
-  if (!/^\\d+(\\.\\d+)?$/.test(request.quantity) || Number(request.quantity) <= 0) {
+  if (!/^\d+(\.\d+)?$/.test(request.quantity) || Number(request.quantity) <= 0) {
     return { eligible: false, code: "INVALID_QUANTITY", reason: "Quantity must be a positive decimal value." };
   }
   if (request.lotSize) {
