@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@salts/database/client";
-import { currentUser } from "./auth.js";
+import { assertTrustedOrigin, currentUser } from "./auth.js";
 
 function requireMarket(value: unknown): "INDIA" | "CRYPTO" {
   if (value !== "INDIA" && value !== "CRYPTO") throw Object.assign(new Error("Market must be INDIA or CRYPTO."), { statusCode: 400 });
