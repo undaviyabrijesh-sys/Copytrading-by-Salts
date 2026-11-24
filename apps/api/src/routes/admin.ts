@@ -127,15 +127,15 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       if (action === "SUSPEND") await tx.hostSubscription.updateMany({
         where: { listingId, status: "ACTIVE" }, data: { status: "PAUSED" }
       });
+      await tx.auditEvent.create({ data: {
+        actorId: actor.id, tenantId: existing.hostUserId,
+        action: action === "SUSPEND" ? "HOST_LISTING_ADMIN_SUSPENDED" : "HOST_LISTING_ADMIN_REINSTATED",
+        targetType: "HostListing", targetId: listingId,
+        requestId: randomBytes(12).toString("hex"),
+        metadata: { previousStatus: existing.status, newStatus: nextStatus }
+      }});
       return updated;
     });
-    await prisma.auditEvent.create({ data: {
-      actorId: actor.id, tenantId: existing.hostUserId,
-      action: action === "SUSPEND" ? "HOST_LISTING_ADMIN_SUSPENDED" : "HOST_LISTING_ADMIN_REINSTATED",
-      targetType: "HostListing", targetId: listingId,
-      requestId: randomBytes(12).toString("hex"),
-      metadata: { previousStatus: existing.status, newStatus: nextStatus }
-    }});
     return { listing };
   });
 
