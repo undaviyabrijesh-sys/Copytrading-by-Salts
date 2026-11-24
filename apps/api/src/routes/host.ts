@@ -11,7 +11,7 @@ function requireMarket(value: unknown): "INDIA" | "CRYPTO" {
 async function actorFor(request: FastifyRequest, reply: FastifyReply) {
   const actor = await currentUser(request);
   if (!actor) { reply.code(401).send({ error: "Authentication required." }); return null; }
-  if (!actor.roles.includes("HOST") && !actor.roles.includes("ADMIN")) {
+  if (!actor.roles.includes("HOST")) {
     reply.code(403).send({ error: "An approved host role is required to manage listings." });
     return null;
   }
@@ -102,7 +102,9 @@ export async function registerHostRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  app.get("/api/v1/listings", async (request) => {
+  app.get("/api/v1/listings", async (request, reply) => {
+    const actor = await currentUser(request);
+    if (!actor) return reply.code(401).send({ error: "Authentication required." });
     const query = request.query as { market?: string };
     const market = query.market ? requireMarket(query.market) : undefined;
     const listings = await prisma.hostListing.findMany({
