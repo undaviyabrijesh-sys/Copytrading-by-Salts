@@ -4,7 +4,7 @@ import { prisma } from "@salts/database/client";
 import { currentUser, assertTrustedOrigin } from "./auth.js";
 import { decryptBrokerSecret, encryptBrokerSecret } from "../security/broker-vault.js";
 
-const supported = new Set(["ZERODHA", "UPSTOX", "FYERS"]);
+const supported = new Set(["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE"]);
 const hash = (v: string) => createHash("sha256").update(v).digest("hex");
 function expiryIST(hour: number, minute = 0) {
   const now = new Date();
@@ -36,7 +36,7 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     await prisma.brokerOAuthAttempt.updateMany({ where: { userId: actor.id, provider: connection.provider, usedAt: null }, data: { usedAt: new Date() } });
     await prisma.brokerOAuthAttempt.create({ data: { userId: actor.id, connectionId, provider: connection.provider, stateHash: hash(state), redirectUri, expiresAt } });
     let url: URL;
-    if (connection.provider === "UPSTOX") {
+    if (connection.provider === "ANGEL_ONE") {\n      if (!credentials.apiKey) return reply.code(422).send({ error: "Angel One SmartAPI app API key is required." });\n      url = new URL("https://smartapi.angelone.in/publisher-login");\n      url.search = new URLSearchParams({ api_key: credentials.apiKey, redirect_url: redirectUri, state }).toString();\n    } else if (connection.provider === "UPSTOX") {
       if (!credentials.clientId || !credentials.clientSecret) return reply.code(422).send({ error: "Upstox client ID and secret are required." });
       url = new URL("https://api.upstox.com/v2/login/authorization/dialog");
       url.search = new URLSearchParams({ response_type: "code", client_id: credentials.clientId, redirect_uri: redirectUri, state }).toString();
@@ -60,7 +60,7 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     if (!supported.has(provider)) return reply.code(404).send({ error: "Unsupported broker callback." });
     const q = request.query as Record<string, string | undefined>;
     const state = provider === "ZERODHA" ? new URLSearchParams(q.redirect_params ?? "").get("state") ?? undefined : q.state;
-    const code = provider === "ZERODHA" ? q.request_token : provider === "FYERS" ? q.auth_code : q.code;
+    const code = provider === "ZERODHA" ? q.request_token : provider === "FYERS" ? q.auth_code : provider === "ANGEL_ONE" ? q.auth_token : q.code;
     const origin = process.env.APP_ORIGIN;
     if (!origin) return reply.code(503).send({ error: "APP_ORIGIN is not configured." });
     const done = (s: string) => reply.redirect(`${origin}/connections?broker=${provider}&oauth=${s}`);
