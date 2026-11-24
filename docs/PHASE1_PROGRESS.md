@@ -9,7 +9,8 @@ Branch: `phase1-foundation`
 - Login/logout/me endpoints use opaque random session tokens. Only token hashes are persisted. Session records are revocable and expire after 12 hours. Session cookie is HttpOnly, SameSite=Strict, scoped to the API path, and Secure in production.
 - TOTP MFA enrollment, encrypted secret storage (AES-256-GCM), authenticator verification, MFA login challenge and 10-minute admin step-up verification are implemented. The encryption key is supplied through `MFA_ENCRYPTION_KEY` and must be kept in a production secret manager.
 - Login, invite redemption and invite issuance have per-route rate limits. Mutating auth/admin routes require exact `APP_ORIGIN` match.
-- Admin invite issuance requires ADMIN role and MFA enrollment. Until MFA enrollment is implemented, this endpoint intentionally refuses administrator invite creation.
+- TOTP MFA enrollment, encrypted secret storage (AES-256-GCM), authenticator verification, MFA login challenge and 10-minute admin step-up verification are implemented. The encryption key is supplied through `MFA_ENCRYPTION_KEY` and must be kept in a production secret manager.
+- Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites, approve HOST role, suspend/reactivate users, and revoke unused invites.
 - Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication.
 - Subscription endpoints support list, subscribe and unsubscribe. A subscription is linked to one listing and market, defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future routing must stop.
 - Audit events are written for invite creation, host listing changes and subscription changes.
@@ -27,7 +28,7 @@ Branch: `phase1-foundation`
 ## Not yet complete
 
 - Recent MFA re-authentication can be further improved with a dedicated short-lived step-up challenge endpoint and session revocation management.
-- Admin UI, user/role approval APIs, invite revoke/list APIs, and host application workflow.
+- Admin UI and host application workflow. Admin APIs are available but still need frontend integration and integration tests.
 - Broker connection wizard and KMS-backed broker credential encryption.
 - Database migrations, production deployment, operational secrets wiring and automated integration tests against PostgreSQL.
 - Paper execution engine, event lifecycle/replay, broker adapters and reconciliation.
