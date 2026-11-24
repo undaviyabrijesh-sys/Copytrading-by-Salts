@@ -10,6 +10,29 @@ export type CredentialProvider = {
   note: string;
 };
 
+const field = (key: string, label: string): CredentialField => ({ key, label, secret: true });
+
+// These are only the static application credentials documented by each provider.
+// User login, OTP/TOTP, PIN/MPIN and redirect-returned tokens belong in a
+// provider-hosted, one-time authentication flow; they are never collected here.
+function providerCredentialFields(id: string): CredentialField[] {
+  const definitions: Record<string, CredentialField[]> = {
+    ZERODHA: [field("apiKey", "Kite Connect API key"), field("apiSecret", "Kite Connect API secret")],
+    ANGEL_ONE: [field("apiKey", "SmartAPI app API key")],
+    UPSTOX: [field("clientId", "Upstox client ID"), field("clientSecret", "Upstox client secret")],
+    FYERS: [field("clientId", "FYERS app ID"), field("clientSecret", "FYERS app secret")],
+    SHOONYA: [field("clientId", "Shoonya client ID"), field("clientSecret", "Shoonya secret code")],
+    FLATTRADE: [field("apiKey", "Flattrade API key"), field("apiSecret", "Flattrade API secret")],
+    FIVE_PAISA: [field("clientId", "5paisa app key"), field("clientSecret", "5paisa encryption key")],
+    ICICI_BREEZE: [field("apiKey", "Breeze app key"), field("apiSecret", "Breeze secret key")],
+    ALICE_BLUE: [field("clientId", "Alice Blue app code"), field("apiSecret", "Alice Blue API secret")],
+    DHAN: [field("accessToken", "DhanHQ access token")],
+    GROWW: [field("accessToken", "Groww Trading API access token")],
+    DELTA_INDIA: [field("apiKey", "Delta API key"), field("apiSecret", "Delta API secret")]
+  };
+  return definitions[id] ?? [];
+}
+
 export const credentialProviders: CredentialProvider[] = [
   { id: "DHAN", label: "DhanHQ", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "DhanHQ access token", secret: true }], docsUrl: "https://dhanhq.co/docs/v2/authentication/", connectEnabled: true, note: "Token-only connection. Order permission and static-IP eligibility are not verified until a provider health check is implemented." },
   { id: "GROWW", label: "Groww Trade API", market: "INDIA", auth: "API_TOKEN", fields: [{ key: "accessToken", label: "Groww Trading API access token", secret: true }], docsUrl: "https://groww.in/trade-api/docs", connectEnabled: true, note: "Token-only connection. Daily expiry applies; account and order permissions remain unverified." },
@@ -27,15 +50,9 @@ export const credentialProviders: CredentialProvider[] = [
     ["ALICE_BLUE", "Alice Blue ANT", "https://ant.aliceblueonline.com/productdocumentation/"]
   ] as const).map(([id, label, docsUrl]) => ({
     id, label, market: "INDIA" as const, auth: "OAUTH" as const,
-    fields: [
-      { key: "clientId", label: "Broker app / client ID", secret: true },
-      { key: "clientSecret", label: "Broker app / client secret", secret: true },
-      { key: "apiKey", label: "Broker-issued API key", secret: true },
-      { key: "apiSecret", label: "Broker-issued API secret", secret: true },
-      { key: "accessToken", label: "Broker-issued access token", secret: true }
-    ],
+    fields: providerCredentialFields(id),
     docsUrl, connectEnabled: true,
-    note: "Secure credential intake only. Enter only API/app credentials explicitly issued for API use. OAuth callback, account verification and trading remain unavailable until provider-specific integration is completed."
+    note: "Secure intake of the listed static app credentials only. This does not authenticate an account. Broker-hosted login, callback handling, identity and permissions must be implemented and verified separately."
   })),
   ...([
     ["IIFL", "IIFL Securities", "https://www.iiflcapital.com/"],
