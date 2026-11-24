@@ -9,6 +9,7 @@ import { registerSubscriptionRoutes } from "./routes/subscriptions.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerSignalRoutes } from "./routes/signals.js";
 import { registerBrokerConnectionRoutes } from "./routes/broker-connections.js";
+import { registerBrokerOAuthRoutes } from "./routes/broker-oauth.js";
 
 const app = Fastify({
   logger: {
@@ -49,6 +50,7 @@ await registerSubscriptionRoutes(app);
 await registerAdminRoutes(app);
 await registerSignalRoutes(app);
 await registerBrokerConnectionRoutes(app);
+await registerBrokerOAuthRoutes(app);
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
