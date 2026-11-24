@@ -11,7 +11,10 @@ export default function InvitePage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setToken(new URLSearchParams(window.location.search).get("token") ?? "");
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const inviteToken = fragment.get("token") ?? "";
+    setToken(inviteToken);
+    if (inviteToken) window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
