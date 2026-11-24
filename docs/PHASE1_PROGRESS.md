@@ -45,3 +45,22 @@ Branch: `phase1-foundation`
 - All subscription records are PAPER mode only.
 - India live trading remains disabled pending written legal and broker approvals.
 - No user can read another user's broker credential material through these endpoints.
+
+
+## Phased delivery execution — 24 November 2026
+
+The full delivery plan is tracked in `docs/IMPLEMENTATION_ROADMAP.md`. Phase 1 (broker connections) is active.
+
+### Phase 1 contract alignment change
+
+The provider registry and `GET /api/v1/brokers/providers` response now distinguish four separate states:
+- `connectEnabled`: the exact static credential fields may be collected and encrypted.
+- `authenticationImplemented`: a provider-specific account-authentication flow exists in source.
+- `accountVerificationImplemented`: a provider-specific account verification flow exists in source.
+- `executionReady`: full order execution and lifecycle acceptance has passed. This remains false for every provider.
+
+Current source-level auth/account-verification implementations: Zerodha, Upstox, FYERS, Angel One, 5paisa, Groww and Delta Exchange India. Credential intake is configured for Dhan, Shoonya, Flattrade, ICICI Breeze and Alice Blue, but authentication/account verification remain pending. Other catalogue providers remain research-only.
+
+A provider registry test now asserts the expected split and prevents a credential form from being interpreted as account authentication or execution readiness. This is a source change only; it has not yet been executed successfully because the latest GitHub Actions run fails at job initialization with `steps: null` and no job logs. No test pass is claimed.
+
+Latest branch head: `9e6312bad84f236cc1edcbf19eb0b6f0ac820cde`.
