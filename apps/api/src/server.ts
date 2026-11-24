@@ -14,7 +14,7 @@ import { registerBrokerOAuthRoutes } from "./routes/broker-oauth.js";
 const app = Fastify({
   logger: {
     redact: {
-      paths: ["req.headers.authorization", "req.headers.cookie", "req.headers[\"x-api-key\"]"],
+      paths: ["req.url", "req.headers.authorization", "req.headers.cookie", "req.headers[\"x-api-key\"]"],
       censor: "[REDACTED]"
     }
   },
