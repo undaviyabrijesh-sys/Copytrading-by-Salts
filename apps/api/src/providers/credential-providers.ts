@@ -1,10 +1,8 @@
-import type { Market } from "@salts/domain";
-
 export type CredentialField = { key: string; label: string; secret: true };
 export type CredentialProvider = {
   id: string;
   label: string;
-  market: Market;
+  market: "INDIA" | "CRYPTO";
   auth: "API_TOKEN" | "API_KEY_SECRET" | "OAUTH";
   fields: CredentialField[];
   docsUrl: string;
