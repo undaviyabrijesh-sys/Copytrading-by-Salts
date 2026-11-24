@@ -84,7 +84,6 @@ model User {
   updatedAt       DateTime @updatedAt
   connections     BrokerConnection[]
   listings        HostListing[]
-  subscriptions   HostSubscription[]
   acceptances     DisclosureAcceptance[]
   invitesCreated Invite[] @relation("InviteCreator")
   auditEvents     AuditEvent[] @relation("AuditActor")
