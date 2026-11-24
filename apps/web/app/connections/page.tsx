@@ -74,13 +74,27 @@ export default function ConnectionsPage() {
   }
   const list = useMemo(()=>BROKERS.filter(b=>b.market===market && (b.name.toLowerCase().includes(query.toLowerCase()) || b.id.toLowerCase().includes(query.toLowerCase()))),[market,query]);
   const broker = BROKERS.find(b=>b.id===selected && b.market===market) ?? list[0];
-  const credentialKeys = !broker ? [] : broker.id === "DELTA_INDIA" ? ["apiKey","apiSecret"] : broker.id === "DHAN" || broker.id === "GROWW" ? ["accessToken"] : ["clientId","clientSecret","apiKey","apiSecret","accessToken"];
-  const credentialLabels: Record<string,string> = { clientId:"Broker app / client ID", clientSecret:"Broker app / client secret", apiKey:"Broker-issued API key", apiSecret:"Broker-issued API secret", accessToken:"Broker-issued access token" };
+  const credentialDefinitions: Record<string,string[]> = {
+    ZERODHA:["apiKey","apiSecret"], ANGEL_ONE:["apiKey"],
+    UPSTOX:["clientId","clientSecret"], FYERS:["clientId","clientSecret"],
+    SHOONYA:["clientId","clientSecret"], FLATTRADE:["apiKey","apiSecret"],
+    FIVE_PAISA:["clientId","clientSecret"], ICICI_BREEZE:["apiKey","apiSecret"],
+    ALICE_BLUE:["clientId","apiSecret"], DHAN:["accessToken"],
+    GROWW:["accessToken"], DELTA_INDIA:["apiKey","apiSecret"]
+  };
+  const credentialKeys = !broker || broker.status !== "DOCUMENTED" ? [] : (credentialDefinitions[broker.id] ?? []);
+  const credentialLabels: Record<string,string> = {
+    clientId:"Provider app/client ID (or documented app code/key)",
+    clientSecret:"Provider app secret (or documented encryption/secret key)",
+    apiKey:"Provider API key", apiSecret:"Provider API secret",
+    accessToken:"Provider-issued access token"
+  };
+  const canSubmitCredentials = credentialKeys.length > 0;
   async function saveCredentials() {
     if (!broker || !credentialKeys.some(key=>(credentials[key] ?? "").trim())) return;
     setSaving(true); setConnectionMessage("");
     try {
-      const response = await fetch("/api/v1/brokers/connections", { method:"POST", credentials:"include", headers:{"content-type":"application/json"}, body:JSON.stringify({ provider:broker.id, label:broker.name, credentials:Object.fromEntries(credentialKeys.map(key=>[key,credentials[key] ?? ""])) }) });
+      const response = await fetch("/api/v1/brokers/connections", { method:"POST", credentials:"include", headers:{"content-type":"application/json"}, body:JSON.stringify({ provider:broker.id, label:broker.name, credentials:Object.fromEntries(credentialKeys.filter(key=>(credentials[key] ?? "").trim()).map(key=>[key,credentials[key]!.trim()])) }) });
       const data = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(data.error ?? "Unable to save broker credentials.");
       setCredentials({});
@@ -104,7 +118,7 @@ export default function ConnectionsPage() {
       <h3>Connection steps</h3><ol>{broker.setup.map(x=><li key={x}>{x}</li>)}</ol>
       <h3>Important limitations</h3><ul>{broker.restrictions.map(x=><li key={x}>{x}</li>)}</ul>
       <h3>Market coverage</h3><p>{broker.segments.join(" · ")}</p><p className="sub">{broker.notes}</p>
-      <div className="connection-form"><h3>Secure credential submission</h3><p className="sub">Submit only API/app credentials that this broker explicitly issued for API access. Use the fields that apply; leave the others blank. Values are sent to the authenticated server and encrypted with AWS KMS before storage. They are never returned to the browser.</p>{credentialKeys.map(key=><label className="admin-label" key={key}>{credentialLabels[key]} <span className="sub">(optional)</span><input type="password" autoComplete="new-password" value={credentials[key] ?? ""} onChange={event=>setCredentials(current=>({...current,[key]:event.target.value}))} /></label>)}<button className="primary-button" disabled={saving || !credentialKeys.some(key=>(credentials[key] ?? "").trim())} onClick={()=>void saveCredentials()}>{saving ? "Encrypting and saving…" : "Save encrypted credentials"}</button>{connectionMessage && <p className="sub" role="status">{connectionMessage}</p>}<p className="sub">Important: this submits and encrypts credentials only. It does NOT authenticate the broker account, complete OAuth, verify permissions or enable trading. The connection remains PENDING until a provider-specific integration passes verification.</p></div>
+      {canSubmitCredentials ? <div className="connection-form"><h3>Secure app-credential intake</h3><p className="sub">Only enter the provider-specific application credentials listed below. Broker login, OTP/TOTP, PIN/MPIN and redirect-returned authorization codes/tokens must be handled in a separate provider-hosted authentication flow; do not enter them here. Values are encrypted server-side with AWS KMS before storage.</p>{credentialKeys.map(key=><label className="admin-label" key={key}>{credentialLabels[key]}<input type="password" autoComplete="new-password" value={credentials[key] ?? ""} onChange={event=>setCredentials(current=>({...current,[key]:event.target.value}))} /></label>)}<button className="primary-button" disabled={saving || !credentialKeys.some(key=>(credentials[key] ?? "").trim())} onClick={()=>void saveCredentials()}>{saving ? "Encrypting and saving…" : "Save encrypted app credentials"}</button>{connectionMessage && <p className="sub" role="status">{connectionMessage}</p>}<p className="sub">Saving credentials does not connect or authenticate the broker. The record remains PENDING until OAuth/login, account identity, trading permissions, static-IP and provider health checks pass. Secure storage also requires AWS KMS to be configured.</p></div> : <div className="connection-form"><h3>Connection unavailable — verification pending</h3><p className="sub">We are not collecting credentials for this provider yet. Its official API availability, exact authentication requirements, account eligibility, third-party platform permissions and order capabilities must be verified before enabling a connection form.</p></div>}
     </section>}
     <section className="card"><h2>Security rules</h2><ul><li>Never enter broker passwords, PINs, TOTP seeds or withdrawal credentials into chat, email or support tickets.</li><li>API secrets will be encrypted server-side with a managed key vault; they will never be returned to the browser or written to logs.</li><li>Use read-only permissions where possible; add order permissions only when approved. Withdrawal/transfer permissions are never requested.</li><li>Each connection belongs to one user and one market. India credentials cannot be selected in Crypto, or vice versa.</li><li>Static-IP requirements must be satisfied before order permission is enabled.</li></ul></section>
   </main>;
