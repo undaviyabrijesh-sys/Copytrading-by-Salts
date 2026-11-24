@@ -1,5 +1,6 @@
 import type { AdapterCapabilities, CanonicalInstrument, CanonicalOrderType, Market, SignalEventType, Side } from "./index.js";
 import { evaluateCopyRequest } from "./copy-policy.js";
+import { compareDecimalStrings, multiplyDecimalStrings } from "./decimal.js";
 
 export interface PaperSubscriptionContext {
   id: string;
@@ -43,37 +44,6 @@ export interface PaperDestinationContext {
   openOrderCount: number;
   dailyLoss: number;
   linkedPositionExists: boolean;
-}
-
-function decimalParts(value: string): { coefficient: bigint; scale: number } | null {
-  if (value.length > 64 || !/^\d+(?:\.\d+)?$/.test(value)) return null;
-  const [whole, fraction = ""] = value.split(".");
-  return { coefficient: BigInt(whole + fraction), scale: fraction.length };
-}
-
-function formatDecimal(coefficient: bigint, scale: number): string {
-  const negative = coefficient < 0n;
-  let digits = (negative ? -coefficient : coefficient).toString().padStart(scale + 1, "0");
-  if (scale > 0) {
-    digits = digits.slice(0, -scale) + "." + digits.slice(-scale);
-    digits = digits.replace(/\.?0+$/, "");
-  }
-  return (negative ? "-" : "") + digits;
-}
-
-function multiplyDecimals(left: string, right: string): string | null {
-  const a = decimalParts(left), b = decimalParts(right);
-  if (!a || !b) return null;
-  return formatDecimal(a.coefficient * b.coefficient, a.scale + b.scale);
-}
-
-function compareDecimals(left: string, right: string): number | null {
-  const a = decimalParts(left), b = decimalParts(right);
-  if (!a || !b) return null;
-  const scale = Math.max(a.scale, b.scale);
-  const av = a.coefficient * 10n ** BigInt(scale - a.scale);
-  const bv = b.coefficient * 10n ** BigInt(scale - b.scale);
-  return av < bv ? -1 : av > bv ? 1 : 0;
 }
 
 export type PaperRoutingDecision =
@@ -137,10 +107,10 @@ export function evaluatePaperRouting(input: {
   if (sub.settings.maxDailyLoss !== undefined && (!Number.isFinite(sub.settings.maxDailyLoss) || sub.settings.maxDailyLoss < 0)) {
     return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber daily-loss limit is invalid." };
   }
-  if (sub.settings.maxQuantity !== undefined && (compareDecimals(String(sub.settings.maxQuantity), "0") ?? -1) <= 0) {
+  if (sub.settings.maxQuantity !== undefined && (compareDecimalStrings(String(sub.settings.maxQuantity), "0") ?? -1) <= 0) {
     return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber maximum quantity is invalid." };
   }
-  if (sub.settings.maxOrderValue !== undefined && (compareDecimals(String(sub.settings.maxOrderValue), "0") ?? -1) <= 0) {
+  if (sub.settings.maxOrderValue !== undefined && (compareDecimalStrings(String(sub.settings.maxOrderValue), "0") ?? -1) <= 0) {
     return { eligible: false, code: "INVALID_RISK_LIMIT", reason: "Subscriber maximum order value is invalid." };
   }
   if (sub.settings.maxOpenOrders !== undefined && dest.openOrderCount >= sub.settings.maxOpenOrders) {
@@ -151,20 +121,20 @@ export function evaluatePaperRouting(input: {
   }
   const multiplier = String(sub.settings.quantityMultiplier ?? 1);
   const sourceQuantity = signal.quantity ?? "";
-  const quantity = multiplyDecimals(sourceQuantity, multiplier);
-  if (!quantity || compareDecimals(sourceQuantity, "0") === null || compareDecimals(sourceQuantity, "0")! <= 0 || compareDecimals(multiplier, "0") === null || compareDecimals(multiplier, "0")! <= 0 || compareDecimals(quantity, "0")! <= 0) {
+  const quantity = multiplyDecimalStrings(sourceQuantity, multiplier);
+  if (!quantity || compareDecimalStrings(sourceQuantity, "0") === null || compareDecimalStrings(sourceQuantity, "0")! <= 0 || compareDecimalStrings(multiplier, "0") === null || compareDecimalStrings(multiplier, "0")! <= 0 || compareDecimalStrings(quantity, "0")! <= 0) {
     return { eligible: false, code: "INVALID_SIZING", reason: "Subscriber sizing multiplier or source quantity is invalid." };
   }
-  const maxQuantityComparison = sub.settings.maxQuantity === undefined ? null : compareDecimals(quantity, String(sub.settings.maxQuantity));
+  const maxQuantityComparison = sub.settings.maxQuantity === undefined ? null : compareDecimalStrings(quantity, String(sub.settings.maxQuantity));
   if (sub.settings.maxQuantity !== undefined && (maxQuantityComparison === null || maxQuantityComparison > 0)) {
     return { eligible: false, code: "MAX_QUANTITY", reason: "Calculated quantity exceeds the subscriber maximum quantity." };
   }
   if (sub.settings.maxOrderValue !== undefined) {
     const price = signal.price ?? "";
-    const orderValue = multiplyDecimals(quantity, price);
-    const priceComparison = compareDecimals(price, "0");
+    const orderValue = multiplyDecimalStrings(quantity, price);
+    const priceComparison = compareDecimalStrings(price, "0");
     if (!orderValue || priceComparison === null || priceComparison <= 0) return { eligible: false, code: "PRICE_REQUIRED", reason: "A valid reference price is required to enforce the subscriber order-value cap." };
-    const valueComparison = compareDecimals(orderValue, String(sub.settings.maxOrderValue));
+    const valueComparison = compareDecimalStrings(orderValue, String(sub.settings.maxOrderValue));
     if (valueComparison === null || valueComparison > 0) {
       return { eligible: false, code: "MAX_ORDER_VALUE", reason: "Calculated order value exceeds the subscriber maximum." };
     }
