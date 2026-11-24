@@ -3,6 +3,7 @@ import rateLimit from "@fastify/rate-limit";
 import { prisma } from "@salts/database/client";
 import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerHostRoutes } from "./routes/host.js";
 
 const app = Fastify({ logger: true, trustProxy: false });
 
@@ -28,6 +29,7 @@ app.get("/api/v1/platform", async () => ({
 await app.register(rateLimit, { global: false });
 await registerPlatformRoutes(app);
 await registerAuthRoutes(app);
+await registerHostRoutes(app);
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
