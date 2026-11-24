@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { randomBytes } from "node:crypto";\nimport { Prisma } from "@salts/database/client";
-import { prisma } from "@salts/database/client";
+import { randomBytes } from "node:crypto";
+import { Prisma, prisma } from "@salts/database/client";
 import { assertTrustedOrigin, currentUser } from "./auth.js";
 
 const events = ["ENTRY", "EXIT", "PARTIAL_EXIT", "MODIFY_ORDER", "CANCEL", "PLACE_STOP_LOSS", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP", "SQUARE_OFF"] as const;
 
-export async function registerSignalRoutes(app: FastifyInstance) {\n
+export async function registerSignalRoutes(app: FastifyInstance) {
+
   app.get("/api/v1/host/signals", async (request, reply) => {
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
@@ -98,8 +99,8 @@ export async function registerSignalRoutes(app: FastifyInstance) {\n
           hostConnectionId: connection.id,
           market: body.market,
           event: body.event,
-          instrument: body.instrument as object,
-          payload: body.payload as object,
+          instrument: body.instrument as Prisma.InputJsonObject,
+          payload: body.payload as Prisma.InputJsonObject,
           occurredAt: new Date(body.occurredAt)
         }});
         const subscriptions = await tx.hostSubscription.findMany({
