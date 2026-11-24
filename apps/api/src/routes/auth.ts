@@ -30,7 +30,7 @@ function clearSessionCookie(reply: FastifyReply) {
   reply.header("set-cookie", `${SESSION_COOKIE}=; Path=/api/v1; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
 }
 
-function assertTrustedOrigin(request: FastifyRequest) {
+export function assertTrustedOrigin(request: FastifyRequest) {
   const expected = process.env.APP_ORIGIN;
   const origin = request.headers.origin;
   if (!expected || !origin || origin !== expected) {
