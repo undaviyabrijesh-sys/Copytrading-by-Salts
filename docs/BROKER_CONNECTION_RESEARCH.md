@@ -13,11 +13,11 @@ Never request withdrawal, fund-transfer or payout permissions. Never store TOTP 
 
 | Provider | Authentication model | Setup fields / method | Important constraints | Research status |
 |---|---|---|---|---|
-| Zerodha Kite Connect | API key + API secret; broker login and request-token exchange | API key, API secret, registered redirect URL | Server-side handshake; plan entitlements; verify current static-IP and third-party routing rules | Official docs reviewed; adapter not built |
+| Zerodha Kite Connect | API key + API secret; broker login and request-token exchange | API key, API secret, registered redirect URL | Server-side state-bound handshake; daily token; static IP and third-party routing rules remain separate gates | OAuth/token exchange + profile check implemented; order adapter not built |
 | DhanHQ | API key + API secret + Dhan client ID | Dhan client ID (client_id), API key (app_id), API secret (app_secret) | Individual vs partner eligibility; 24-hour token; static IP mandatory for order placement per docs | Official docs reviewed; adapter not built |
 | Angel One SmartAPI | API key + client code + PIN + TOTP; JWT/refresh/feed tokens | API key, client code, one-time login challenge | Session normally ends at midnight; do not persist PIN/TOTP; verify static-IP and partner permissions | Official docs reviewed; adapter not built |
-| Upstox | OAuth 2.0 authorization code | Client ID, client secret, redirect URI; broker-hosted authorization | Broker handles user login; token expiry and partner/copy permissions need verification | Official docs reviewed; adapter not built |
-| FYERS v3 | OAuth authorization code; app ID/secret; daily access token | App ID, app secret, redirect URI | Personal apps are only for their creator; third-party platform requires common app approval | Official docs reviewed; approval gate |
+| Upstox | OAuth 2.0 authorization code | Client ID, client secret, redirect URI; broker-hosted authorization | Single-use code; daily expiry; partner/copy permissions need verification | OAuth/token exchange + profile check implemented; order adapter not built |
+| FYERS v3 | OAuth authorization code; app ID/secret; daily access token | App ID, app secret, redirect URI | Personal apps are only for their creator; third-party platform requires common app approval | OAuth/token exchange + profile check implemented; third-party common-app approval still blocks platform use |
 | Shoonya | Current official docs describe OAuth authorization code and 24-hour token | Client/app identifier and server-side checksum material per current flow | Older community material describes legacy TOTP; do not implement without current official confirmation | Official docs reviewed; adapter not built |
 | Flattrade Pi | Registered API key/secret and broker session flow | API key, API secret, callback/session material per current docs | Order-volume profile selection; confirm current static-IP and partner rules | Official docs reviewed; adapter not built |
 | 5paisa Xstream | OAuth or TOTP-assisted request-token flow; exchange for daily token | App identity/key, encryption material, broker-issued request token | Daily token; verify app/account approval, static-IP and third-party terms | Official docs reviewed; adapter not built |
@@ -192,3 +192,11 @@ The Dhan credential contract now includes the Dhan client ID (client_id) as well
 ### Verification boundary
 
 No real broker credentials were used during development. No live orders were submitted. Delta verification has code-level tests for deterministic signing and unsafe-path rejection, but the full API/UI build and integration tests must pass in CI before this slice is considered validated. Other broker authentication flows remain unimplemented.
+
+## Implemented broker-authentication status — 24 November 2026
+
+- Zerodha, Upstox and FYERS: server-side authorization start, high-entropy one-time state, ten-minute expiry, callback binding to the authenticated user's connection, one-time callback claim, token exchange, broker profile identity check, encrypted token persistence and expiry metadata are implemented in source. The callback base must be configured as BROKER_OAUTH_CALLBACK_BASE and registered exactly with each broker application. No live broker credentials have been tested.
+- Delta Exchange India: signed HMAC-SHA256 read-only account endpoint check is implemented. Trading permission remains UNKNOWN; live execution remains DISABLED.
+- Dhan, Angel One, Shoonya, Flattrade, 5paisa, ICICI Breeze, Alice Blue and Groww: credential/setup research exists, but complete account authentication, callback, token verification and expiry handling are not implemented. They must not be represented as connected.
+- Remaining catalogue-only providers: no credential collection or adapter until official developer API and platform permissions are verified.
+- Even where authentication is implemented, the order adapter, complete order lifecycle, fixed-IP compliance, broker permissions, legal review and end-to-end paper/live safety tests remain separate deliverables.
