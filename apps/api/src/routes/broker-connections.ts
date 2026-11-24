@@ -36,7 +36,6 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Credential fields do not match this provider's required fields." });
     }
     if (Object.values(body.credentials).some(value => !value.trim())) return reply.code(400).send({ error: "Credential values cannot be empty." });
-    if (provider.market === "INDIA" && body.credentials.withdrawalPermission) return reply.code(400).send({ error: "Withdrawal permissions are never accepted." });
     let encrypted;
     try { encrypted = await encryptBrokerSecret(body.credentials); }
     catch (error) {
@@ -49,7 +48,7 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
       data: {
         userId: actor.id, market: provider.market, provider: provider.id, label: body.label.trim(),
         encryptedSecret: encrypted.ciphertext, keyFingerprint: encrypted.fingerprint,
-        permissions: { requested: ["read"], verified: false, withdrawals: false },
+        permissions: { scopeStatus: "UNKNOWN", verified: false, withdrawals: "NOT_VERIFIED" },
         status: "PENDING"
       },
       select: { id: true, market: true, provider: true, label: true, status: true, createdAt: true }
