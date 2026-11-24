@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "../../components/logout-button.js";
 import { useEffect, useState } from "react";
 
 type Listing = { id: string; market: "INDIA" | "CRYPTO"; title: string; description: string; riskDisclosure: string; publishedAt: string | null; host: { id: string; displayName: string } };
@@ -67,7 +68,7 @@ export default function MarketplacePage() {
 
   const activeByListing = new Map(subscriptions.filter(s => s.status === "ACTIVE").map(s => [s.listing.id, s]));
   return <main className="admin-wrap">
-    <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">SUBSCRIBER WORKSPACE · PAPER ONLY</p><h1>Host marketplace</h1><p className="sub">Discover published hosts and manage your own subscriptions.</p></div><a className="text-link" href="/">← Overview</a></header>
+    <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">SUBSCRIBER WORKSPACE · PAPER ONLY</p><h1>Host marketplace</h1><p className="sub">Discover published hosts and manage your own subscriptions.</p></div><div className="header-actions"><a className="text-link" href="/">← Overview</a><LogoutButton /></div></header>
     <div className="market-switch"><button className={`market ${market === "INDIA" ? "selected" : ""}`} onClick={() => setMarket("INDIA")}>India</button><button className={`market ${market === "CRYPTO" ? "selected" : ""}`} onClick={() => setMarket("CRYPTO")}>Crypto</button></div>
     <section className="card risk-settings">
       <div><h2>My copy risk settings</h2><p className="sub">These settings apply to new subscriptions and can be saved to an existing subscription. Risk limits are enforced by the paper-routing gate.</p></div>
