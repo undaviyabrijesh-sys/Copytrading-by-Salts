@@ -33,6 +33,8 @@ model User {
   acceptances     DisclosureAcceptance[]
   invitesCreated Invite[] @relation("InviteCreator")
   auditEvents     AuditEvent[] @relation("AuditActor")
+  hostedSubscriptions HostSubscription[] @relation("HostSubscriptions")
+  followedSubscriptions HostSubscription[] @relation("SubscriberSubscriptions")
 }
 
 model Invite {
@@ -115,8 +117,8 @@ model HostSubscription {
   settings    Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  host        User @relation(fields: [hostUserId], references: [id])
-  subscriber  User @relation(fields: [subscriberId], references: [id])
+  host        User @relation("HostSubscriptions", fields: [hostUserId], references: [id])
+  subscriber  User @relation("SubscriberSubscriptions", fields: [subscriberId], references: [id])
   listing     HostListing @relation(fields: [listingId], references: [id])
   @@unique([subscriberId, listingId])
   @@index([subscriberId, market, status])
