@@ -71,3 +71,12 @@ Latest branch head: `9e6312bad84f236cc1edcbf19eb0b6f0ac820cde`.
 Canonical instrument validation now rejects malformed contract identity, invalid tick/lot/multiplier values and incomplete option specifications. Copy eligibility checks that the mapped destination segment is declared by the adapter capability profile. Lifecycle gates now require exact target order IDs for order modifications/cancellations and a reconciled position quantity before partial exits; partial-exit sizing uses exact decimal arithmetic and cannot exceed the copied open quantity. The connections UI now reads credential field keys and labels from the API provider registry rather than maintaining a second independent credential-key contract.
 
 Tests have been added for these rules but remain unexecuted/unverified due the GitHub Actions job-initialization failure (no steps/logs). No broker execution adapter or live trading capability is introduced by these changes.
+
+
+## Authenticated-user context correction — 24 November 2026
+
+- Fixed the authenticated request context used by API routes: `currentUser()` now selects and returns the account `status` field alongside the existing tenant-scoped identity fields.
+- Host signal routes read `actor.status` to enforce active-account checks. The prior `SafeUser` contract omitted that field, creating a TypeScript contract mismatch and preventing a reliable API typecheck.
+- The returned status is sourced from the database; `currentUser()` still only selects sessions whose user is `ACTIVE`. This does not weaken authorization or expose additional account data.
+- Source commits: `32ebc0a817c5012d52023f39c78c861ee464b7e2` and `a748ba55f86b97f2635e2605962fa13da59f8bd5`.
+- Validation: source was re-fetched and checked for the updated type/query/return contract. A successful build or test run has not yet been observed; CI status currently reports no checks for the latest commit.
