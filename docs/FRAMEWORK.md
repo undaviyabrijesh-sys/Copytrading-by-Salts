@@ -311,6 +311,81 @@ The table records official-document findings as of 24 Nov 2026. Exact API plan p
 | Upstox | https://upstox.com/developer/api-documentation/ | Order APIs: regular-algo 10/sec, 500/min, 2,000/30 min; static IP management API published Apr 10 2026; static IP updates once per calendar week and invalidate existing tokens. Algo name header requirement applies to algo app orders. | Tier 1, approval pending |
 | FYERS | https://fyers.in/api-docs/v3/ | Order endpoints documented with 10 OPS. Current guide says App Type 200 supports order placement; static IP must be whitelisted; login endpoint 10 requests / 2 min. FYERS guidance says third-party platforms must be empanelled/hosted within broker infrastructure under current framework. | Tier 1, partner/empanelment gate |
 
+
+
+### Expanded India broker coverage — catalogue and adapter roadmap
+
+The platform's long-term Indian connector scope is broader than the initial launch trio. The adapter architecture must be provider-neutral and the broker picker should be data-driven. We will not claim every listed provider is immediately live-ready: an entry becomes **order-enabled** only after official documentation, API access, pricing, OAuth/vendor onboarding, static-IP mapping, exchange segments, rate limits and the multi-client copy-trading permission are verified.
+
+#### Tier 1 — launch/pilot candidates (subject to written platform approval)
+
+| Broker | API / official entry point | Initial scope | Gate / notes |
+|---|---|---|---|
+| Zerodha | https://kite.trade/docs/connect/v3/ | NSE/BSE, NFO, CDS, MCX where account/segment enabled | Static IP, API subscription and third-party vendor permission to be confirmed. |
+| Dhan | https://dhanhq.co/docs/v2/ | NSE/BSE, F&O, MCX where enabled | 24-hour token lifecycle and individual static-IP mapping; partner onboarding required for multi-client platform. |
+| Angel One | https://smartapi.angelone.in/docs | NSE/BSE, F&O, commodity where enabled | Static IP, OAuth/vendor onboarding and rate limits must be confirmed against current official notices. |
+| Upstox | https://upstox.com/developer/api-documentation/ | NSE/BSE, F&O, commodity where enabled | Static IP, algo-app identification and API rate limits; verify partner route. |
+| FYERS | https://fyers.in/api-docs/v3/ | NSE/BSE, F&O, commodity where enabled | Static IP and third-party platform empanelment/hosting requirements. |
+| Shoonya (Finvasia) | https://www.shoonya.com/api-documentation | NSE/BSE, F&O, currency/commodity subject to account segments | Official docs describe REST + WebSocket, OAuth 2.0, trading APIs and vendor OAuth for platform integrators. Confirm vendor onboarding, API terms and current rate limits. |
+| Flattrade | https://flattrade.in/ (official API/docs entry to be confirmed with provider) | NSE/BSE, F&O, commodity subject to account | Pi API/Noren ecosystem is referenced by broker documentation; obtain current official docs, rate limits, auth and platform/vendor approval directly. |
+| 5paisa | https://xstream.5paisa.com/ (developer portal) | NSE/BSE, F&O | Xstream/Open API availability is documented; confirm current API plan, static IP, OAuth/vendor model and rate limits. |
+| ICICI Direct | https://www.icicidirect.com/futures-and-options/api/breeze | NSE/BSE, F&O | Breeze API; verify account eligibility, session lifecycle, rate limits, static-IP and third-party platform permissions. |
+| Kotak Neo | https://www.kotakneo.com/trade-api/ | NSE/BSE, F&O | Static IP required for order execution from 1 Apr 2026 per Kotak's notice. Confirm current login/session flow and vendor eligibility. |
+| Alice Blue | https://ant.aliceblueonline.com/ (ANT API portal; verify current docs with broker) | NSE/BSE, F&O, commodity subject to account | ANT API exists; obtain current official developer pack, auth, limits, static-IP and partner terms. |
+| Groww | https://groww.in/trade-api | NSE/BSE, F&O subject to API/product support | Official Trade API exists; verify account-level access, key issuance, order types, static IP and whether third-party OAuth/vendor onboarding is supported. |
+
+#### Tier 2 — expanded coverage after first pilot
+
+| Broker / provider | Official starting point | Status and verification required |
+|---|---|---|
+| IIFL Securities / IIFL Capital | https://www.iiflcapital.com/ | API/XTS availability is referenced in provider ecosystem material. Obtain current official developer docs, order API eligibility, pricing and vendor approval. |
+| Motilal Oswal | https://www.motilaloswal.com/ | Open API / XTS route is referenced; confirm current developer portal, account eligibility, rate limits and commercial terms. |
+| SAMCO | https://www.samco.in/ | Trade API availability is referenced; obtain current official API docs and verify OAuth/session, static IP, limits and multi-client vendor permission. |
+| Tradejini | https://tradejini.com/ | CubePlus/API route is referenced; verify current official API pack, supported segments, pricing and vendor onboarding. |
+| Nuvama | https://www.nuvama.com/ | API Connect availability is referenced; verify access eligibility, order endpoints, rate limits and platform/vendor terms. |
+| HDFC Securities / HDFC SKY | https://www.hdfcsec.com/ and https://hdfcsky.com/ | Confirm whether retail order APIs are publicly available to the target account type; do not assume website/app access implies an API. |
+| Mirae Asset m.Stock | https://www.mstock.com/ | API availability is referenced in market materials; verify current official developer documentation, plan/pricing and allowed usage. |
+| Sharekhan | https://www.sharekhan.com/ | Trading API availability varies by program/account; obtain current official developer access and written vendor terms. |
+| Axis Direct | https://simplehai.axisdirect.in/ | Verify whether a current retail order API is offered and whether third-party platform integration is allowed. |
+| Choice Broking | https://choiceindia.com/ | Verify current API availability, XTS/partner access, segments and vendor onboarding. |
+| Jainam | https://www.jainam.in/ | Verify retail API availability versus prop-only access; confirm supported segments and vendor permission. |
+| Mastertrust | https://www.mastertrust.co.in/ | Verify official API documentation, access eligibility, order support and vendor terms. |
+| Zebu | https://zebuetrade.com/ | Verify official API access, supported segments, current docs and platform permission. |
+| SAS Online | https://www.sasonline.in/ | Verify current API status, developer docs and account eligibility. |
+| Paytm Money | https://www.paytmmoney.com/ | Verify current retail API availability and whether order APIs remain open for new integrations. |
+| Pocketful | https://pocketful.in/ | Verify current official developer docs, API access, supported segments and terms. |
+| Firstock | https://firstock.in/ | Verify current API docs, Noren/vendor access, pricing and order placement permissions. |
+| Stoxkart | https://www.stoxkart.com/ | Verify current Superr API documentation, account eligibility and partner model. |
+| TradeSmart | https://www.tradesmartonline.in/ | Verify current API access and XTS/partner integration terms. |
+| Wisdom Capital | https://wisdomcapital.in/ | Verify current API access, account eligibility and supported order types. |
+| RMoney | https://rmoneyindia.com/ | Verify current API documentation and whether retail API order placement is available. |
+| Compositedge | https://compositedge.com/ | Verify broker/API entity, regulatory status, API access and supported segments before adding. |
+| Definedge | https://www.definedge.com/ | Verify current broker/API offering and retail order placement eligibility. |
+| HDFC / other Symphony XTS, ODIN or Noren member brokers | Provider-specific official site | Do not treat a shared OMS protocol as proof of API entitlement. Each broker must approve the account and platform integration separately. |
+
+#### Broker discovery and connector governance
+
+The roadmap should remain extensible beyond the names above. Add a provider only after it meets these checks:
+
+1. SEBI-registered broker identity and official API documentation are confirmed.
+2. Retail API order placement is available for the subscriber's account type; data-only APIs do not qualify.
+3. Broker explicitly permits the intended third-party, multi-client copy-trading workflow and has completed required vendor/empanelment steps.
+4. Authentication is broker-approved OAuth or the current mandated flow; never collect broker web passwords, MPIN or TOTP in our own UI if the broker requires user-to-broker authorization.
+5. Static IP is mapped to the correct end-user/API key; the broker confirms whether a platform-operated or subscriber-operated egress IP is accepted.
+6. Supported exchanges/segments, order types, freeze quantity, lot size, rate limits, token expiry, WebSocket/postback behavior, sandbox and fees are documented.
+7. Adapter contract tests pass and the broker is shown as **Paper**, **Live approved**, **Read-only**, or **Unavailable** in the product. Never display a connector as live-ready based only on a package/SDK.
+
+#### Research evidence and limitations
+
+- Shoonya's official API documentation explicitly describes OAuth 2.0, REST + WebSocket, trading APIs and platform/vendor integrators: https://www.shoonya.com/api-documentation
+- Shoonya API terms describe programmatic order placement, modification, cancellation and account/portfolio access: https://www.shoonya.com/api-terms-and-conditions
+- Kotak Neo's static-IP notice says order APIs require whitelisted static IPs and a session created from that IP effective 1 April 2026: https://www.kotakneo.com/platform/kotak-neo-trade-api/static-ip-details/
+- NSE implementation standards require client static IP address(es) mapped to API keys: https://nsearchives.nseindia.com/content/circulars/INVG67858.pdf
+- SEBI's June 2025 master circular says brokers deal with empanelled algo providers and requires unique vendor-client API keys, static IP whitelisting, OAuth and two-factor authentication for the relevant API-provider model: https://www.sebi.gov.in/sebi_data/attachdocs/jun-2025/1750158789381.pdf
+
+Third-party broker directories and aggregator lists were used only to discover names, not to assert API availability or permissions. Every provider's final status must be based on current first-party documentation and written broker confirmation. API pricing and access can change; no cost is treated as confirmed until checked at implementation time.
+
+
 ### Crypto — proposed launch order
 
 | Provider | Official docs / verified facts | Current constraint / open item | Priority |
