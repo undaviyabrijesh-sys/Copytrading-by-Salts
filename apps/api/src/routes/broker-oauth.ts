@@ -36,6 +36,8 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     await prisma.brokerOAuthAttempt.updateMany({ where: { userId: actor.id, provider: connection.provider, usedAt: null }, data: { usedAt: new Date() } });
     await prisma.brokerOAuthAttempt.create({ data: { userId: actor.id, connectionId, provider: connection.provider, stateHash: hash(state), redirectUri, expiresAt } });
     let url: URL;
+    let authorizationMethod: "GET" | "POST" = "GET";
+    let authorizationFields: Record<string, string> | undefined;
     if (connection.provider === "FIVE_PAISA") {
       if (!credentials.clientId || !credentials.clientSecret || !credentials.userId) return reply.code(422).send({ error: "5paisa AppKey, encryption key and user ID are required." });
       const loginEndpoint = process.env.FIVE_PAISA_OAUTH_URL;
@@ -44,7 +46,8 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
       try { loginUrl = new URL(loginEndpoint); } catch { return reply.code(503).send({ error: "5paisa login endpoint configuration is invalid." }); }
       if (loginUrl.protocol !== "https:" || !["openapi.5paisa.com", "dev-openapi.5paisa.com"].includes(loginUrl.hostname)) return reply.code(503).send({ error: "5paisa login endpoint must use an official HTTPS 5paisa API host." });
       url = loginUrl;
-      url.search = new URLSearchParams({ VendorKey: credentials.clientId, ResponseURL: redirectUri, State: state }).toString();
+      authorizationMethod = "POST";
+      authorizationFields = { VendorKey: credentials.clientId, ResponseURL: redirectUri, State: state };
     } else if (connection.provider === "ANGEL_ONE") {
       if (!credentials.apiKey) return reply.code(422).send({ error: "Angel One SmartAPI app API key is required." });
       url = new URL("https://smartapi.angelone.in/publisher-login");
