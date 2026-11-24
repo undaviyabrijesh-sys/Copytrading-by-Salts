@@ -84,7 +84,16 @@ export async function registerHostRoutes(app: FastifyInstance) {
       ...(body.riskDisclosure !== undefined ? { riskDisclosure: body.riskDisclosure.trim() } : {}),
       ...(body.status !== undefined ? { status: body.status, publishedAt: body.status === "PUBLISHED" ? new Date() : existing.publishedAt } : {})
     };
-    const listing = await prisma.hostListing.update({ where: { id: listingId, hostUserId: actor.id }, data });
+    const listing = await prisma.$transaction(async (tx) => {
+      const updated = await tx.hostListing.update({ where: { id: listingId, hostUserId: actor.id }, data });
+      if (body.status !== undefined && body.status !== "PUBLISHED") {
+        await tx.hostSubscription.updateMany({
+          where: { listingId, status: "ACTIVE" },
+          data: { status: "PAUSED" }
+        });
+      }
+      return updated;
+    });
     await prisma.auditEvent.create({
       data: { actorId: actor.id, tenantId: actor.id, action: "HOST_LISTING_UPDATED", targetType: "HostListing", targetId: listing.id, requestId: randomBytes(12).toString("hex") }
     });
