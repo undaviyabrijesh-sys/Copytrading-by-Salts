@@ -1,6 +1,6 @@
 import type { AdapterCapabilities, CanonicalInstrument, CanonicalOrderType, Market, SignalEventType, Side } from "./index.js";
 import { evaluateCopyRequest } from "./copy-policy.js";
-import { compareDecimalStrings, multiplyDecimalStrings } from "./decimal.js";
+import { compareDecimalStrings, isDecimalMultiple, isPositiveDecimal, multiplyDecimalStrings } from "./decimal.js";
 
 export interface PaperSubscriptionContext {
   id: string;
@@ -31,6 +31,7 @@ export interface PaperSignalContext {
   price?: string;
   lotSize?: string;
   minQuantity?: string;
+  targetOrderId?: string;
 }
 
 export interface PaperDestinationContext {
@@ -44,6 +45,7 @@ export interface PaperDestinationContext {
   openOrderCount: number;
   dailyLoss: number;
   linkedPositionExists: boolean;
+  openPositionQuantity?: string;
 }
 
 export type PaperRoutingDecision =
@@ -83,7 +85,19 @@ export function evaluatePaperRouting(input: {
 
   if (!isEntry) {
     if (!dest.instrumentMapped || !dest.destinationInstrument || dest.destinationInstrument.market !== dest.market) return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "Existing position management requires a verified destination instrument mapping." };
-    if (["PLACE_STOP_LOSS", "MODIFY_STOP_LOSS", "PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.orderType) return { eligible: false, code: "MANAGEMENT_ORDER_TYPE_REQUIRED", reason: "Stop and take-profit events require an explicit canonical order type." };\n    if (signal.orderType && !dest.capabilities.orderTypes.includes(signal.orderType)) return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: "Destination adapter does not support the management order type." };
+    if (["MODIFY_ORDER", "CANCEL", "MODIFY_STOP_LOSS", "CANCEL_STOP_LOSS", "MODIFY_TAKE_PROFIT", "CANCEL_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.targetOrderId) return { eligible: false, code: "TARGET_ORDER_REQUIRED", reason: "This management event must reference the exact source order; ambiguous order matching is not allowed." };
+    if (signal.event === "PARTIAL_EXIT") {
+      if (!signal.quantity || !isPositiveDecimal(signal.quantity)) return { eligible: false, code: "PARTIAL_EXIT_QUANTITY_REQUIRED", reason: "Partial exits require an explicit positive quantity." };
+      if (!dest.capabilities.supportsPartialFills) return { eligible: false, code: "PARTIAL_EXIT_UNSUPPORTED", reason: "Destination adapter has not certified partial-exit support." };
+      if (!dest.openPositionQuantity || !isPositiveDecimal(dest.openPositionQuantity)) return { eligible: false, code: "OPEN_POSITION_QUANTITY_UNKNOWN", reason: "Partial exit is blocked until the exact copied position quantity is reconciled." };
+      const closeQuantity = multiplyDecimalStrings(signal.quantity, String(sub.settings.quantityMultiplier ?? 1));
+      if (!closeQuantity || compareDecimalStrings(closeQuantity, dest.openPositionQuantity) === null || compareDecimalStrings(closeQuantity, dest.openPositionQuantity)! > 0) return { eligible: false, code: "PARTIAL_EXIT_EXCEEDS_POSITION", reason: "Scaled partial-exit quantity exceeds the reconciled copied position." };
+      if (signal.lotSize && !isDecimalMultiple(closeQuantity, signal.lotSize)) return { eligible: false, code: "INVALID_PARTIAL_EXIT_LOT", reason: "Scaled partial-exit quantity is not a valid lot multiple." };
+      if (signal.minQuantity && (compareDecimalStrings(closeQuantity, signal.minQuantity) ?? -1) < 0) return { eligible: false, code: "PARTIAL_EXIT_BELOW_MINIMUM", reason: "Scaled partial-exit quantity is below the broker minimum." };
+      return { eligible: true, event: signal.event, quantity: closeQuantity, instrument: dest.destinationInstrument, managementOnly: true };
+    }
+    if (["PLACE_STOP_LOSS", "MODIFY_STOP_LOSS", "PLACE_TAKE_PROFIT", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !signal.orderType) return { eligible: false, code: "MANAGEMENT_ORDER_TYPE_REQUIRED", reason: "Stop and take-profit events require an explicit canonical order type." };
+    if (signal.orderType && !dest.capabilities.orderTypes.includes(signal.orderType)) return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: "Destination adapter does not support the management order type." };
     if (!dest.capabilities.supportsOrderEvents) return { eligible: false, code: "ORDER_EVENTS_UNSUPPORTED", reason: "Destination adapter cannot safely process order lifecycle events." };
     if (["CANCEL", "CANCEL_STOP_LOSS", "CANCEL_TAKE_PROFIT"].includes(signal.event) && !dest.capabilities.supportsCancel) return { eligible: false, code: "CANCEL_UNSUPPORTED", reason: "Destination adapter does not support cancellation." };
     if (["MODIFY_ORDER", "MODIFY_STOP_LOSS", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !dest.capabilities.supportsModify) {
