@@ -20,12 +20,13 @@ export default function Home() {
         <a className="nav-item" href="#activity">Copy activity</a>
         <div className="nav-title">CONTROL</div>
         <a className="nav-item" href="#safety">Risk & safety</a>
-        <a className="nav-item" href="#admin">Admin console</a>
+        <a className="nav-item" href="/admin">Admin console</a>
+        <a className="nav-item" href="/login">Sign in</a>
       </aside>
       <main className="main">
         <div className="topbar">
           <div><div className="eyebrow">INVITE-ONLY · MULTI-USER PLATFORM</div><h1>Trading workspace</h1><div className="sub">Independent host and subscriber accounts. Separate India and Crypto execution environments.</div></div>
-          <div className="pill">● SYSTEM DESIGN · PAPER FIRST</div>
+          <div className="pill">● PAPER FIRST · <a href="/login">SIGN IN</a></div>
         </div>
 
         <div id="markets" className="market-switch">
