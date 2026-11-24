@@ -11,6 +11,10 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     reply.header("cache-control", "no-store");
+    await prisma.brokerConnection.updateMany({
+      where: { userId: actor.id, status: "CONNECTED", tokenExpiresAt: { lte: new Date() } },
+      data: { status: "REAUTH_REQUIRED" }
+    });
     const connections = await prisma.brokerConnection.findMany({
       where: { userId: actor.id },
       orderBy: { createdAt: "desc" },
