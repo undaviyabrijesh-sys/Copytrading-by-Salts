@@ -201,7 +201,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     assertTrustedOrigin(request);
     const body = request.body as { token: string; email: string; displayName: string; password: string };
     const email = body.email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) return reply.code(400).send({ error: "A valid email is required." });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(400).send({ error: "A valid email is required." });
     const tokenHash = hashOpaqueToken(body.token);
     const passwordHash = await argon2.hash(body.password, { type: argon2.argon2id });
     const sessionToken = issueOpaqueToken();
