@@ -1,6 +1,7 @@
 import type { AdapterCapabilities, CanonicalInstrument, CanonicalOrderType, Market } from "./index.js";
 import { assertMarketMatch, isOrderTypeSupported } from "./index.js";
 import { compareDecimalStrings, isDecimalMultiple, isPositiveDecimal } from "./decimal.js";
+import { validateCanonicalInstrument } from "./instrument-validation.js";
 
 export interface CopyRequest {
   sourceMarket: Market;
@@ -31,6 +32,8 @@ export function evaluateCopyRequest(request: CopyRequest): CopyEligibility {
   if (!request.instrumentMapped || !request.destinationInstrument) {
     return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "No verified equivalent instrument exists at the destination broker." };
   }
+  const instrumentValidation = validateCanonicalInstrument(request.destinationInstrument);
+  if (!instrumentValidation.valid) return { eligible: false, code: instrumentValidation.code, reason: instrumentValidation.reason };
   if (request.destinationInstrument.market !== request.destinationMarket) {
     return { eligible: false, code: "DESTINATION_INSTRUMENT_MARKET_MISMATCH", reason: "Mapped instrument belongs to a different market." };
   }
