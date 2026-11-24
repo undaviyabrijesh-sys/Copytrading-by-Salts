@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@salts/database/client";
 import { currentUser } from "./auth.js";
@@ -8,7 +8,7 @@ function requireMarket(value: unknown): "INDIA" | "CRYPTO" {
   return value;
 }
 
-async function actorFor(request: FastifyRequest, reply: { code: (status: number) => { send: (body: unknown) => unknown } }) {
+async function actorFor(request: FastifyRequest, reply: FastifyReply) {
   const actor = await currentUser(request);
   if (!actor) { reply.code(401).send({ error: "Authentication required." }); return null; }
   if (!actor.roles.includes("HOST") && !actor.roles.includes("ADMIN")) {
