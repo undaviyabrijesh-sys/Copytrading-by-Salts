@@ -154,6 +154,7 @@ model BrokerConnection {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   user            User @relation(fields: [userId], references: [id])
+  destinationFor HostSubscription[] @relation("SubscriptionDestinationConnection")
   @@index([userId, market])
 }
 
@@ -187,11 +188,14 @@ model HostSubscription {
   host        User @relation("HostSubscriptions", fields: [hostUserId], references: [id])
   subscriber  User @relation("SubscriberSubscriptions", fields: [subscriberId], references: [id])
   listing     HostListing @relation(fields: [listingId], references: [id])
+  destinationConnectionId String?
+  destinationConnection BrokerConnection? @relation("SubscriptionDestinationConnection", fields: [destinationConnectionId], references: [id])
   copyIntents CopyIntent[]
   @@unique([subscriberId, listingId])
   @@index([subscriberId, market, status])
   @@index([hostUserId])
   @@index([listingId])
+  @@index([destinationConnectionId])
 }
 
 model Signal {
