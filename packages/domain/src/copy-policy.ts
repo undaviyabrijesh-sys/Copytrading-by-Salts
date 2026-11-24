@@ -34,6 +34,9 @@ export function evaluateCopyRequest(request: CopyRequest): CopyEligibility {
   if (request.destinationInstrument.market !== request.destinationMarket) {
     return { eligible: false, code: "DESTINATION_INSTRUMENT_MARKET_MISMATCH", reason: "Mapped instrument belongs to a different market." };
   }
+  if (!request.capabilities.segments.includes(request.destinationInstrument.segment)) {
+    return { eligible: false, code: "DESTINATION_SEGMENT_UNSUPPORTED", reason: `Destination broker does not support segment ${request.destinationInstrument.segment}.` };
+  }
   if (!isOrderTypeSupported(request.orderType, request.capabilities)) {
     return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: `Destination broker does not support ${request.orderType} for this account capability set.` };
   }
