@@ -5,6 +5,7 @@ import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerHostRoutes } from "./routes/host.js";
 import { registerSubscriptionRoutes } from "./routes/subscriptions.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 
 const app = Fastify({ logger: true, trustProxy: false });
 
@@ -32,6 +33,7 @@ await registerPlatformRoutes(app);
 await registerAuthRoutes(app);
 await registerHostRoutes(app);
 await registerSubscriptionRoutes(app);
+await registerAdminRoutes(app);
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
