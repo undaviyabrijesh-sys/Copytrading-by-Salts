@@ -91,7 +91,6 @@ export function evaluatePaperRouting(input: {
   destination: PaperDestinationContext;
 }): PaperRoutingDecision {
   const { subscription: sub, signal, destination: dest } = input;
-  const managementOnly = sub.status !== "ACTIVE" || sub.listingStatus !== "PUBLISHED";
   const isEntry = signal.event === "ENTRY";
 
   if (sub.hostUserId !== signal.hostUserId) return { eligible: false, code: "HOST_SUBSCRIPTION_MISMATCH", reason: "Signal host does not match the subscribed host." };
@@ -108,7 +107,6 @@ export function evaluatePaperRouting(input: {
     return { eligible: false, code: "LINKED_POSITION_NOT_FOUND", reason: "Management event has no linked copied position or order at this subscriber." };
   }
 
-  if (isEntry && !signal.orderType) return { eligible: false, code: "ORDER_TYPE_MISSING", reason: "Signal does not contain a normalized order type." };
   if (signal.orderType && sub.settings.allowedOrderTypes && !sub.settings.allowedOrderTypes.includes(signal.orderType)) {
     return { eligible: false, code: "SUBSCRIBER_ORDER_TYPE_BLOCKED", reason: "Subscriber risk settings do not allow this order type." };
   }
@@ -126,6 +124,9 @@ export function evaluatePaperRouting(input: {
     if (signal.event === "TRAIL_STOP" && !dest.capabilities.supportsTrailingStop) return { eligible: false, code: "TRAILING_STOP_UNSUPPORTED", reason: "Destination adapter does not support trailing stops." };
     return { eligible: true, event: signal.event, managementOnly: true };
   }
+
+  if (!signal.orderType) return { eligible: false, code: "ORDER_TYPE_MISSING", reason: "Signal does not contain a normalized order type." };
+  if (!signal.side) return { eligible: false, code: "SIDE_MISSING", reason: "Entry signal does not contain a normalized BUY or SELL side." };
 
   if (sub.settings.maxOpenOrders !== undefined && dest.openOrderCount >= sub.settings.maxOpenOrders) {
     return { eligible: false, code: "MAX_OPEN_ORDERS", reason: "Subscriber open-order limit has been reached." };
