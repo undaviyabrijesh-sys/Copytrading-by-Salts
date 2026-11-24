@@ -100,14 +100,14 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
 
     try {
       const credentials = await decryptBrokerSecret(connection.encryptedSecret);
-      let identity: Record<string, unknown>;
+      let identity: Record<string, string | string[]>;
       let expiresAt: Date | null = null;
       if (connection.provider === "DELTA_INDIA") {
         await verifyDeltaAccount(credentials);
         identity = { authentication: "VERIFIED", accountIdentity: "AUTHENTICATED_BY_SIGNED_ACCOUNT_ENDPOINT" };
       } else {
         const profile = await verifyGrowwAccount(credentials.accessToken ?? "");
-        identity = { authentication: "VERIFIED", accountIdentity: "VERIFIED", accountId: profile.accountId, ucc: profile.ucc, activeSegments: profile.segments };
+        identity = { authentication: "VERIFIED", accountIdentity: "VERIFIED", accountId: profile.accountId, ucc: profile.ucc ?? "", activeSegments: profile.segments };
         const now = new Date();
         const ist = new Date(now.getTime() + 330 * 60_000);
         const nextSix = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), 6, 0));
