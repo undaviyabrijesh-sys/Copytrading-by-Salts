@@ -18,11 +18,10 @@ The platform supports multiple independent user accounts. The first administrato
    - `MFA_ENCRYPTION_KEY` (unique base64-encoded 32-byte key, stored in AWS Secrets Manager in production)
    - `ADMIN_BOOTSTRAP_EMAIL`
    - `ADMIN_BOOTSTRAP_PASSWORD` (at least 16 characters)
-   - `ADMIN_BOOTSTRAP_TOKEN`
-   - `ADMIN_BOOTSTRAP_EXPECTED_TOKEN` (same independently generated one-time value; at least 16 characters)
+   - `ADMIN_BOOTSTRAP_CONFIRM=CREATE_FIRST_ADMIN` (explicit one-time operator confirmation)
    - Optional `ADMIN_BOOTSTRAP_DISPLAY_NAME`
 3. Run `pnpm --filter @salts/database admin:bootstrap`.
-4. Remove all bootstrap variables from the runtime/secret store immediately. Never commit them or send them in chat.
+4. Remove `ADMIN_BOOTSTRAP_CONFIRM` and `ADMIN_BOOTSTRAP_PASSWORD` from the runtime/secret store immediately. Never commit them or send them in chat.
 5. Sign in, enroll an authenticator using the MFA setup endpoint, confirm the six-digit code, and verify a fresh MFA challenge before using administrator actions.
 
 The bootstrap command is not a login endpoint and does not expose a public way to create administrators. Do not run it against a shared or production database until migrations, backups, and the secure operator environment are ready.
