@@ -36,3 +36,17 @@ test("research-only providers have no credential intake or execution readiness",
   assert.ok(research.every(provider => provider.fields.length === 0));
   assert.ok(research.every(provider => provider.note.toLowerCase().includes("disabled") || provider.note.toLowerCase().includes("research")));
 });
+
+
+test("credential intake, authentication, account verification and execution are distinct readiness gates", () => {
+  const authenticated = credentialProviders.filter(provider => provider.authenticationImplemented);
+  assert.deepEqual(authenticated.map(provider => provider.id).sort(), [
+    "ANGEL_ONE", "DELTA_INDIA", "FIVE_PAISA", "FYERS", "GROWW", "UPSTOX", "ZERODHA"
+  ].sort());
+  const pendingAuth = credentialProviders.filter(provider => provider.connectEnabled && !provider.authenticationImplemented);
+  assert.deepEqual(pendingAuth.map(provider => provider.id).sort(), [
+    "ALICE_BLUE", "DHAN", "FLATTRADE", "ICICI_BREEZE", "SHOONYA"
+  ].sort());
+  assert.ok(credentialProviders.every(provider => !provider.executionReady));
+  assert.ok(credentialProviders.every(provider => provider.accountVerificationImplemented === provider.authenticationImplemented));
+});
