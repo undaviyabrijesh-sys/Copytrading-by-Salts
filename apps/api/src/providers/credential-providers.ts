@@ -26,7 +26,7 @@ function providerCredentialFields(id: string): CredentialField[] {
     FIVE_PAISA: [field("clientId", "5paisa app key"), field("clientSecret", "5paisa encryption key")],
     ICICI_BREEZE: [field("apiKey", "Breeze app key"), field("apiSecret", "Breeze secret key")],
     ALICE_BLUE: [field("clientId", "Alice Blue app code"), field("apiSecret", "Alice Blue API secret")],
-    DHAN: [field("apiKey", "DhanHQ API key"), field("apiSecret", "DhanHQ API secret")],
+    DHAN: [field("clientId", "Dhan client ID"), field("apiKey", "DhanHQ API key"), field("apiSecret", "DhanHQ API secret")],
     GROWW: [field("accessToken", "Groww Trading API access token")],
     DELTA_INDIA: [field("apiKey", "Delta API key"), field("apiSecret", "Delta API secret")]
   };
