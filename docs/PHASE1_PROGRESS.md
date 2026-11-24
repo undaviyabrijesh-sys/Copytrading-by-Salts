@@ -11,7 +11,7 @@ Branch: `phase1-foundation`
 - Login, invite redemption and invite issuance have per-route rate limits. Mutating auth/admin routes require exact `APP_ORIGIN` match.
 - Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites/listings, approve HOST role, suspend/reactivate users, moderate listings, and revoke unused invites. Listing suspension pauses active subscriptions; reinstatement returns the listing to DRAFT so the host must review and republish. Moderation and its audit event are committed atomically.
 - Host listing endpoints support create, list, edit, publish, pause and soft-remove. Hosts cannot edit or republish administrator-suspended listings. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication. Pausing, unpublishing or removing a listing also pauses its active subscriptions to prevent new routing.
-- Subscription endpoints support list, subscribe, unsubscribe and subscriber-owned risk-setting updates. A subscription is linked to one listing and market, defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future entries must stop.
+- Subscription endpoints support list, subscribe, unsubscribe, subscriber-owned risk-setting updates and optional explicit destination broker-account binding. A selected destination must be a connected account owned by the subscriber in the same market. Destination connection inventory is exposed through a sanitized tenant-scoped API; credentials are never returned. A subscription defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future entries must stop.
 - Initial host listing and subscriber marketplace pages are connected to these APIs. Hosts can create, edit, publish, pause and remove listings; subscribers can browse India/Crypto listings, subscribe/unsubscribe, set a quantity multiplier and optional max order value. Authenticated admin/host/marketplace pages include sign-out controls.
 - Audit events are written for invite creation, host listing changes and subscription changes.
 - Health readiness checks PostgreSQL connectivity; liveness remains independent.
@@ -29,7 +29,7 @@ Branch: `phase1-foundation`
 
 - Account recovery, MFA reset and administrative session revocation UX remain to be implemented.
 - Host application workflow, audit-log viewer and additional account recovery controls. Admin APIs and an initial owner console are implemented; frontend integration tests remain.
-- Broker connection wizard and KMS-backed broker credential encryption.
+- Broker connection wizard and KMS-backed broker credential encryption. Subscriber destination account binding is modelled, but no connection can yet be created or connected through the UI.
 - Prisma initial PostgreSQL migration is committed, with deployment/status scripts and migration runbook. It has not yet been applied to a database or validated by a successful CI run. CI now provisions ephemeral PostgreSQL and attempts schema validation/migration; GitHub is still reporting a job-level failure with no step list or downloadable logs.
 - Paper execution engine, event lifecycle/replay, broker adapters and reconciliation. Administrator listing moderation UI/API is now present, but requires integration tests. The current paper-routing policy is a pure domain gate with unit tests added, not an active copy worker.
 
