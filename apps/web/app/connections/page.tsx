@@ -4,6 +4,7 @@ import LogoutButton from "../../components/logout-button.js";
 import { useEffect, useMemo, useState } from "react";
 
 type Connection = { id:string; market:"INDIA"|"CRYPTO"; provider:string; label:string; status:string; createdAt:string };
+type ProviderContract = { id:string; label:string; market:"INDIA"|"CRYPTO"; fields:{key:string;label:string;type:"password"}[]; connectEnabled:boolean; authenticationImplemented:boolean; accountVerificationImplemented:boolean; executionReady:boolean; note:string };
 type Broker = {
   id: string; name: string; market: "INDIA" | "CRYPTO"; status: "DOCUMENTED" | "REVIEW_REQUIRED" | "BLOCKED";
   auth: string; credentialFields: string[]; setup: string[]; restrictions: string[]; docsUrl: string; docsLabel: string;
@@ -64,6 +65,10 @@ export default function ConnectionsPage() {
   const [oauthStartingId,setOauthStartingId] = useState<string | null>(null);
   const [connectionMessage,setConnectionMessage] = useState("");
   const [connections,setConnections] = useState<Connection[]>([]);
+  const [providerContracts,setProviderContracts] = useState<Record<string,ProviderContract>>({});
+  async function loadProviders() {
+    try { const response=await fetch("/api/v1/brokers/providers",{credentials:"include",cache:"no-store"}); if(response.ok){const data=await response.json();setProviderContracts(Object.fromEntries((data.providers ?? []).map((provider:ProviderContract)=>[provider.id,provider])));} } catch { /* Keep connect controls unavailable until the authoritative API contract loads. */ }
+  }
   async function loadConnections() {
     try { const response=await fetch("/api/v1/brokers/connections",{credentials:"include"}); if(response.ok){const data=await response.json();setConnections(data.connections ?? []);} } catch { /* Account list remains unavailable until API recovers. */ }
   }
@@ -76,6 +81,7 @@ export default function ConnectionsPage() {
       window.history.replaceState({}, "", "/connections");
     }
     void loadConnections();
+    void loadProviders();
   },[]);
   async function removeConnection(id:string) {
     const response=await fetch(`/api/v1/brokers/connections/${id}`,{method:"DELETE",credentials:"include",headers:{"content-type":"application/json"}});
@@ -119,33 +125,10 @@ export default function ConnectionsPage() {
   }
   const list = useMemo(()=>BROKERS.filter(b=>b.market===market && (b.name.toLowerCase().includes(query.toLowerCase()) || b.id.toLowerCase().includes(query.toLowerCase()))),[market,query]);
   const broker = BROKERS.find(b=>b.id===selected && b.market===market) ?? list[0];
-  const credentialDefinitions: Record<string,string[]> = {
-    ZERODHA:["apiKey","apiSecret"], ANGEL_ONE:["apiKey"],
-    UPSTOX:["clientId","clientSecret"], FYERS:["clientId","clientSecret"],
-    SHOONYA:["clientId","clientSecret"], FLATTRADE:["apiKey","apiSecret"],
-    FIVE_PAISA:["clientId","clientSecret","userId"], ICICI_BREEZE:["apiKey","apiSecret"],
-    ALICE_BLUE:["clientId","apiSecret"], DHAN:["clientId","apiKey","apiSecret"],
-    GROWW:["accessToken"], DELTA_INDIA:["apiKey","apiSecret"]
-  };
-  const credentialKeys = !broker || broker.status !== "DOCUMENTED" ? [] : (credentialDefinitions[broker.id] ?? []);
-  // Keep the broker's own portal/API terminology visible while mapping each
-  // value to a stable Salts payload key. Never infer one provider's labels for another.
-  const credentialLabels: Record<string,Record<string,string>> = {
-    ZERODHA:{apiKey:"Kite Connect API key (api_key)",apiSecret:"Kite Connect API secret (api_secret)"},
-    ANGEL_ONE:{apiKey:"SmartAPI app API key (api_key)"},
-    UPSTOX:{clientId:"Upstox API key / client ID (client_id)",clientSecret:"Upstox API secret (client_secret)"},
-    FYERS:{clientId:"FYERS app ID (app_id)",clientSecret:"FYERS app secret (app_secret)"},
-    SHOONYA:{clientId:"Shoonya client ID (exact account/app label to be confirmed against current official flow)",clientSecret:"Shoonya secret code (exact field contract to be confirmed before connection is enabled)"},
-    FLATTRADE:{apiKey:"Flattrade API key (api_key)",apiSecret:"Flattrade API secret (api_secret)"},
-    FIVE_PAISA:{clientId:"5paisa AppKey / VendorKey (AppKey)",clientSecret:"5paisa encryption key (EncryKey)",userId:"5paisa user ID (UserId)"},
-    ICICI_BREEZE:{apiKey:"Breeze API app key (api_key)",apiSecret:"Breeze API secret key (api_secret)"},
-    ALICE_BLUE:{clientId:"Alice Blue app code (appCode)",apiSecret:"Alice Blue API secret (apiSecret)"},
-    DHAN:{clientId:"Dhan client ID (client_id)",apiKey:"DhanHQ API key (app_id)",apiSecret:"DhanHQ API secret (app_secret)"},
-    GROWW:{accessToken:"Groww Trading API access token (access_token)"},
-    DELTA_INDIA:{apiKey:"Delta Exchange API key (api_key)",apiSecret:"Delta Exchange API secret (api_secret)"}
-  };
-  const labelsForBroker = broker ? credentialLabels[broker.id] ?? {} : {};
-  const canSubmitCredentials = credentialKeys.length > 0;
+  const providerContract = broker ? providerContracts[broker.id] : undefined;
+  const credentialKeys = providerContract?.fields.map(field=>field.key) ?? [];
+  const labelsForBroker = Object.fromEntries((providerContract?.fields ?? []).map(field=>[field.key,field.label]));
+  const canSubmitCredentials = Boolean(providerContract?.connectEnabled && credentialKeys.length > 0);
   async function saveCredentials() {
     if (!broker || !credentialKeys.every(key=>(credentials[key] ?? "").trim())) return;
     setSaving(true); setConnectionMessage("");
@@ -170,10 +153,10 @@ export default function ConnectionsPage() {
     </section>
     {broker && <section className="card">
       <div className="section-head"><div><p className="eyebrow">{broker.market} · {broker.status.replace("_"," ")}</p><h2>{broker.name}</h2><p className="sub">{broker.auth}</p></div><a className="text-link" href={broker.docsUrl} target="_blank" rel="noreferrer">Official documentation ↗</a></div>
-      <h3>Credentials the wizard will request</h3><ul>{broker.credentialFields.map(x=><li key={x}>{x}</li>)}</ul>
+      <h3>Credentials the wizard will request</h3><ul>{(providerContract?.fields.map(field=>field.label) ?? broker.credentialFields).map(x=><li key={x}>{x}</li>)}</ul>
       <h3>Connection steps</h3><ol>{broker.setup.map(x=><li key={x}>{x}</li>)}</ol>
       <h3>Important limitations</h3><ul>{broker.restrictions.map(x=><li key={x}>{x}</li>)}</ul>
-      <h3>Market coverage</h3><p>{broker.segments.join(" · ")}</p><p className="sub">{broker.notes}</p>
+      <h3>Market coverage</h3><p>{broker.segments.join(" · ")}</p><p className="sub">{broker.notes}</p>{providerContract && <div className="sub">Integration status: credential intake {providerContract.connectEnabled?"enabled":"disabled"} · authentication {providerContract.authenticationImplemented?"implemented":"pending"} · account verification {providerContract.accountVerificationImplemented?"implemented":"pending"} · order execution {providerContract.executionReady?"certified":"not certified"}. {providerContract.note}</div>}
       {canSubmitCredentials ? <div className="connection-form"><h3>Secure app-credential intake</h3><p className="sub">Only enter the provider-specific application credentials listed below. Broker login, OTP/TOTP, PIN/MPIN and redirect-returned authorization codes/tokens must be handled in a separate provider-hosted authentication flow; do not enter them here. Values are encrypted server-side with AWS KMS before storage.</p>{credentialKeys.map(key=><label className="admin-label" key={key}>{labelsForBroker[key] ?? key}<input type="password" autoComplete="new-password" value={credentials[key] ?? ""} onChange={event=>setCredentials(current=>({...current,[key]:event.target.value}))} /></label>)}<button className="primary-button" disabled={saving || !credentialKeys.every(key=>(credentials[key] ?? "").trim())} onClick={()=>void saveCredentials()}>{saving ? "Encrypting and saving…" : "Save encrypted app credentials"}</button>{connectionMessage && <p className="sub" role="status">{connectionMessage}</p>}<p className="sub">Saving credentials does not connect or authenticate the broker. The record remains PENDING until OAuth/login, account identity, trading permissions, static-IP and provider health checks pass. Secure storage also requires AWS KMS to be configured.</p></div> : <div className="connection-form"><h3>Connection unavailable — verification pending</h3><p className="sub">We are not collecting credentials for this provider yet. Its official API availability, exact authentication requirements, account eligibility, third-party platform permissions and order capabilities must be verified before enabling a connection form.</p></div>}
     </section>}
     <section className="card"><h2>Security rules</h2><ul><li>Never enter broker passwords, PINs, TOTP seeds or withdrawal credentials into chat, email or support tickets.</li><li>API secrets will be encrypted server-side with a managed key vault; they will never be returned to the browser or written to logs.</li><li>Use read-only permissions where possible; add order permissions only when approved. Withdrawal/transfer permissions are never requested.</li><li>Each connection belongs to one user and one market. India credentials cannot be selected in Crypto, or vice versa.</li><li>Static-IP requirements must be satisfied before order permission is enabled.</li></ul></section>
