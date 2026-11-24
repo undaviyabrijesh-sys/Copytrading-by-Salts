@@ -44,7 +44,7 @@ export default function MarketplacePage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load marketplace."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, [market]);
+  useEffect(() => { setDestinationConnectionId(""); void load(); }, [market]);
 
   async function subscribe(listingId: string) {
     setBusyId(listingId); setError("");
