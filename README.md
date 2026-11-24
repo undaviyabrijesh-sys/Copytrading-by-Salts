@@ -4,7 +4,7 @@ Private, invite-only, multi-user copy-trading platform. India and Crypto are sep
 
 ## Current implementation status
 
-This branch now includes invite-only authentication, MFA, owner administration, host listing management, subscriber marketplace controls, PostgreSQL migrations and a domain-level paper-routing risk policy. It does not yet connect to a live broker, execute or simulate copied orders, provision AWS resources, or enable live trading. Broker integrations must be implemented and tested individually against current official documentation and approved terms.
+This branch includes invite-only authentication, MFA, owner administration, host listing management, subscriber marketplace controls, signal intake/fan-out, a researched provider catalogue and a guarded AWS KMS envelope-encryption connection API. Only DhanHQ, Groww and Delta credential submission is enabled in source; records remain PENDING until provider identity and permission checks exist. OAuth providers are not yet connectable. It does not execute copied orders, provision AWS resources, or enable live trading. Broker integrations must be implemented and tested individually against current official documentation and approved terms.
 
 ## Stack
 
@@ -27,6 +27,8 @@ This branch now includes invite-only authentication, MFA, owner administration, 
 
 - Paper mode is the default.
 - No real broker credentials belong in source control or environment files.
+- Broker credentials are accepted only through the authenticated API and encrypted with AWS KMS envelope encryption; until KMS is configured, the endpoint rejects submissions and stores nothing.
+- See [broker research](docs/BROKER_CONNECTION_RESEARCH.md) and [vault design](docs/BROKER_VAULT.md).
 - No withdrawal or fund-transfer permissions.
 - India live execution remains disabled pending legal and broker written approval.
 - Unsupported cross-broker order semantics must fail closed, never be silently approximated.
