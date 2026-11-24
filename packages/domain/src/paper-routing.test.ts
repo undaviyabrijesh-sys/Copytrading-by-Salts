@@ -132,3 +132,11 @@ test("rejects malformed source instrument before routing", () => {
   assert.equal(result.eligible, false);
   if (!result.eligible) assert.equal(result.code, "INSTRUMENT_TICK_SIZE_INVALID");
 });
+
+
+test("blocks partial exits when broker order-event reconciliation is unavailable", () => {
+  const partial = { ...signal, event: "PARTIAL_EXIT" as const, quantity: "1" };
+  const result = evaluatePaperRouting({ subscription, signal: partial, destination: { ...destination, linkedPositionExists: true, openPositionQuantity: "0.5", capabilities: { ...capabilities, supportsOrderEvents: false } } });
+  assert.equal(result.eligible, false);
+  if (!result.eligible) assert.equal(result.code, "ORDER_EVENTS_UNSUPPORTED");
+});
