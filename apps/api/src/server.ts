@@ -10,7 +10,7 @@ app.get("/health/live", async () => ({ status: "ok" }));
 
 app.get("/health/ready", async (_request, reply) => {
   try {
-    await prisma.$queryRaw\`SELECT 1\`;
+    await prisma.$queryRaw`SELECT 1`;
     return { status: "ready", database: "connected", executionMode: "PAPER_ONLY" };
   } catch {
     return reply.code(503).send({ status: "not_ready", database: "unavailable" });
