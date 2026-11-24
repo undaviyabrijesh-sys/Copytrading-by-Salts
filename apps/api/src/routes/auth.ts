@@ -99,7 +99,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
 
-  app.post("/api/v1/auth/mfa/enroll", async (request, reply) => {
+  app.post("/api/v1/auth/mfa/enroll", { config: { rateLimit: { max: 3, timeWindow: "1 hour" } } }, async (request, reply) => {
     assertTrustedOrigin(request);
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
@@ -115,6 +115,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/v1/auth/mfa/verify-enrollment", {
+    config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
     schema: { body: { type: "object", additionalProperties: false, required: ["code"], properties: { code: { type: "string", pattern: "^[0-9]{6}$" } } } }
   }, async (request, reply) => {
     assertTrustedOrigin(request);
@@ -134,6 +135,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/v1/auth/mfa/verify-session", {
+    config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
     schema: { body: { type: "object", additionalProperties: false, required: ["code"], properties: { code: { type: "string", pattern: "^[0-9]{6}$" } } } }
   }, async (request, reply) => {
     assertTrustedOrigin(request);
