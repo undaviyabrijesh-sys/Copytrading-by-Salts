@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@salts/database/client";
 import { currentUser, assertTrustedOrigin } from "./auth.js";
 import { decryptBrokerSecret, encryptBrokerSecret } from "../security/broker-vault.js";
+import { buildBrokerCallbackUri } from "../providers/broker-callback.js";
 
 const supported = new Set(["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE", "FIVE_PAISA"]);
 const hash = (v: string) => createHash("sha256").update(v).digest("hex");
@@ -29,7 +30,7 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     if (!supported.has(connection.provider)) return reply.code(409).send({ error: "This broker's secure callback and token exchange are not implemented yet." });
     const base = process.env.BROKER_OAUTH_CALLBACK_BASE;
     if (!base || !base.startsWith("https://")) return reply.code(503).send({ error: "BROKER_OAUTH_CALLBACK_BASE must be configured as a public HTTPS API base URL." });
-    const redirectUri = `${base.replace(/\/$/, "")}/${connection.provider.toLowerCase()}/callback`;
+    const redirectUri = buildBrokerCallbackUri(base, connection.provider);
     const credentials = await decryptBrokerSecret(connection.encryptedSecret);
     const state = randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + 600_000);
