@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 type Listing = { id: string; market: "INDIA" | "CRYPTO"; title: string; description: string; riskDisclosure: string; publishedAt: string | null; host: { id: string; displayName: string } };
 type Subscription = { id: string; status: string; market: string; settings: { quantityMultiplier?: number; maxOrderValue?: number }; listing: { id: string; title: string; market: string; status: string; host: { id: string; displayName: string } } };
+type CopyIntent = { id: string; status: string; decisionCode: string | null; decisionReason: string | null; attemptCount: number; createdAt: string; updatedAt: string; completedAt: string | null; signal: { market: string; event: string; instrument: unknown; occurredAt: string }; subscription: { listing: { id: string; title: string } } };
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (init?.body) headers.set("content-type", "application/json");
@@ -18,6 +19,7 @@ export default function MarketplacePage() {
   const [market, setMarket] = useState<"INDIA" | "CRYPTO">("INDIA");
   const [listings, setListings] = useState<Listing[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [intents, setIntents] = useState<CopyIntent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -27,12 +29,14 @@ export default function MarketplacePage() {
   async function load() {
     setLoading(true); setError("");
     try {
-      const [listingData, subscriptionData] = await Promise.all([
+      const [listingData, subscriptionData, intentData] = await Promise.all([
         api<{ listings: Listing[] }>(`/api/v1/listings?market=${market}`),
-        api<{ subscriptions: Subscription[] }>("/api/v1/subscriptions")
+        api<{ subscriptions: Subscription[] }>("/api/v1/subscriptions"),
+        api<{ intents: CopyIntent[] }>("/api/v1/subscriber/copy-intents")
       ]);
       setListings(listingData.listings);
       setSubscriptions(subscriptionData.subscriptions);
+      setIntents(intentData.intents);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load marketplace."); }
     finally { setLoading(false); }
   }
@@ -82,6 +86,13 @@ export default function MarketplacePage() {
         <div><div className="listing-meta"><span className="pill">{item.market}</span><span className="sub">Host: {item.host.displayName}</span></div><strong>{item.title}</strong><p>{item.description}</p><details><summary>Risk disclosure</summary><p>{item.riskDisclosure}</p></details></div>
         <div>{activeByListing.has(item.id) ? <button className="quiet-button" disabled={busyId === activeByListing.get(item.id)!.id} onClick={() => unsubscribe(activeByListing.get(item.id)!.id)}>Unsubscribe</button> : <button className="primary-button" disabled={busyId === item.id} onClick={() => subscribe(item.id)}>{busyId === item.id ? "Working…" : "Subscribe · Paper"}</button>}</div>
       </article>)}
+    </section>
+
+    <section className="card">
+      <div className="section-head"><div><h2>Copy activity</h2><p className="sub">Per-subscriber routing decisions. QUEUED means accepted for evaluation, not an executed broker order.</p></div><span className="pill">{intents.length} recent intents</span></div>
+      {intents.length === 0 ? <p className="sub">No copy intents yet. New host signals will appear here when fan-out is created.</p> : <div className="table-wrap"><table><thead><tr><th>Listing</th><th>Market / Event</th><th>Status</th><th>Decision</th><th>Created</th></tr></thead><tbody>
+        {intents.map(intent => <tr key={intent.id}><td>{intent.subscription.listing.title}</td><td>{intent.signal.market} · {intent.signal.event}</td><td>{intent.status}</td><td>{intent.decisionCode ? <><strong>{intent.decisionCode}</strong><small>{intent.decisionReason}</small></> : "Awaiting evaluation"}</td><td>{new Date(intent.createdAt).toLocaleString()}</td></tr>)}
+      </tbody></table></div>}
     </section>
     <section className="card"><h2>My subscriptions</h2>{subscriptions.length === 0 ? <p className="sub">You have no subscriptions.</p> : subscriptions.map(s => <div className="listing" key={s.id}><div><strong>{s.listing.title}</strong><p>{s.market} · {s.status} · Host {s.listing.host.displayName} · Size ×{s.settings?.quantityMultiplier ?? 1}{s.settings?.maxOrderValue ? ` · Max value ${s.settings.maxOrderValue}` : ""}</p></div><div className="listing-actions">{s.status === "ACTIVE" && <button className="quiet-button" disabled={busyId === s.id} onClick={() => saveSettings(s.id)}>Save risk settings</button>}{s.status === "ACTIVE" && <button className="quiet-button" disabled={busyId === s.id} onClick={() => unsubscribe(s.id)}>Unsubscribe</button>}<span className="listing-state">{s.status}</span></div></div>)}</section>
     {error && <div className="form-error">{error}</div>}
