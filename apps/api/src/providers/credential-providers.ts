@@ -28,7 +28,7 @@ export const credentialProviders: CredentialProvider[] = [
   ] as const).map(([id, label, docsUrl]) => ({
     id, label, market: "INDIA" as const, auth: "OAUTH" as const, fields: [], docsUrl, connectEnabled: false,
     note: "OAuth/partner flow is not implemented. No credential form is available for this provider yet."
-  }))
+  })),
   ...([
     ["IIFL", "IIFL Securities", "https://www.iiflcapital.com/"],
     ["MOTILAL_OSWAL", "Motilal Oswal", "https://www.motilaloswal.com/"],
