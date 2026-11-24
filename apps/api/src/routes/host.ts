@@ -78,6 +78,7 @@ export async function registerHostRoutes(app: FastifyInstance) {
     const body = request.body as { title?: string; description?: string; riskDisclosure?: string; status?: "DRAFT" | "PUBLISHED" | "PAUSED" };
     const existing = await prisma.hostListing.findFirst({ where: { id: listingId, hostUserId: actor.id, status: { not: "REMOVED" } } });
     if (!existing) return reply.code(404).send({ error: "Listing not found." });
+    if (existing.status === "SUSPENDED") return reply.code(403).send({ error: "This listing is suspended and cannot be republished or edited by the host." });
     const data = {
       ...(body.title !== undefined ? { title: body.title.trim() } : {}),
       ...(body.description !== undefined ? { description: body.description.trim() } : {}),
