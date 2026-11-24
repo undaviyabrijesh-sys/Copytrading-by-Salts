@@ -104,3 +104,10 @@ Only the third state may be considered an eligible adapter, and only after the p
 
 ## Current implementation state
 The connection catalogue UI is a research/education surface only. It does not submit credentials, create connections, perform OAuth callbacks, encrypt API secrets or place orders. Existing connection records and the marketplace destination selector are foundations only. No provider is production-ready until its adapter and test evidence are complete.
+
+
+## Credential intake forms
+
+The connection page now exposes an encrypted credential-intake form for every listed broker/provider. For providers with a reviewed token/key schema (DhanHQ, Groww Trade API and Delta Exchange India), the form uses those specific fields. For other catalogue entries, the form accepts only a restricted set of possible broker-issued API/app values: client ID, client secret, API key, API secret and access token. Users leave irrelevant fields blank.
+
+This is **not** a generic broker login and must never collect trading passwords, PINs, TOTP seeds, recovery codes or withdrawal credentials. Submission is authenticated, requires recent MFA, is rate-limited, and is encrypted with AWS KMS before persistence. If KMS is unavailable, the API rejects the submission and stores nothing. Saved records stay PENDING: there is no claim that a broker authenticated, that the values are valid, or that trading/copy execution is enabled. Provider-specific OAuth, identity, permission, static-IP, segment and order-lifecycle validation remains mandatory.
