@@ -33,7 +33,7 @@ A particularly important concern: the host's trades are being converted into aut
 **Performance display gate:** SEBI's 2025 framework contains restrictions on brokers providing algo services referring directly or indirectly to past/expected algorithm returns, with a specific PaRRVA-verified risk/return metrics exception described in the relevant provisions. The proposed host-performance page must be reviewed by counsel and the participating broker before it is exposed to subscribers. For now, design it as an authenticated, factual operational report based on actual fills, not promotional performance claims; keep performance widgets behind a feature flag until cleared.
 
 Primary references:
-- SEBI Feb 4, 2025 circular: https://www.sebi.gov.in/legal/circulars/feb-2025/safer-participation-of-retail-investors-in-algorithmic-trading_916 ಬರುತ್ತ.html
+- SEBI Feb 4, 2025 circular: https://www.sebi.gov.in/legal/circulars/feb-2025/safer-participation-of-retail-investors-in-algorithmic-trading_91614.html
 - SEBI Sep 30, 2025 implementation timeline extension: https://www.sebi.gov.in/legal/circulars/sep-2025/extension-of-timeline-for-implementation-of-sebi-circular-dated-february-04-2025-on-safer-participation-of-retail-investors-in-algorithmic-trading-_96979.html
 - NSE implementation standards (NSE/INVG/67858): https://nsearchives.nseindia.com/content/circulars/INVG67858.pdf
 - NSE algo / Client Direct API guidance (updated May 27, 2026): https://betanseapi.nseindia.com/static/trade/platform-services-non-neat-decision-support-tools-algorithm-trading
