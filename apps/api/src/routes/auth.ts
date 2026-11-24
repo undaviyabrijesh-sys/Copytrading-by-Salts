@@ -105,6 +105,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     if (actor.totpEnabled) return reply.code(409).send({ error: "MFA is already enabled." });
     const generated = newTotpSecret();
+    reply.header("cache-control", "no-store");
     await prisma.user.update({ where: { id: actor.id }, data: { totpSecretEncrypted: generated.encrypted } });
     return {
       setupRequired: true,
