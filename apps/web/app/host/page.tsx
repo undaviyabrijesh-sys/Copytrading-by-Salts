@@ -4,6 +4,7 @@ import LogoutButton from "../../components/logout-button.js";
 import { FormEvent, useEffect, useState } from "react";
 
 type Listing = { id: string; market: "INDIA" | "CRYPTO"; title: string; description: string; riskDisclosure: string; status: string; updatedAt: string };
+type HostSignal = { id: string; market: string; event: string; instrument: unknown; occurredAt: string; receivedAt: string; _count: { copyIntents: number } };
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (init?.body) headers.set("content-type", "application/json");
@@ -15,6 +16,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export default function HostDeskPage() {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [signals, setSignals] = useState<HostSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,8 +29,12 @@ export default function HostDeskPage() {
   async function load() {
     setLoading(true); setError("");
     try {
-      const data = await api<{ listings: Listing[] }>("/api/v1/host/listings");
+      const [data, signalData] = await Promise.all([
+        api<{ listings: Listing[] }>("/api/v1/host/listings"),
+        api<{ signals: HostSignal[] }>("/api/v1/host/signals")
+      ]);
       setListings(data.listings);
+      setSignals(signalData.signals);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load host listings."); }
     finally { setLoading(false); }
   }
@@ -81,6 +87,13 @@ export default function HostDeskPage() {
         <label>Risk disclosure<textarea required minLength={20} maxLength={3000} rows={3} value={riskDisclosure} onChange={e => setRiskDisclosure(e.target.value)} /></label>
         <div className="form-actions"><button className="primary-button" disabled={busy}>{busy ? "Saving…" : editingId ? "Save changes" : "Save as draft"}</button>{editingId && <button type="button" className="quiet-button" onClick={() => { setEditingId(null); setTitle(""); setDescription(""); setRiskDisclosure(""); }}>Cancel edit</button>}</div>
       </form>
+    </section>
+
+    <section className="card">
+      <div className="section-head"><div><h2>Signal activity</h2><p className="sub">Signals received from your connected source account and subscriber fan-out counts. This does not confirm broker execution.</p></div><span className="pill">{signals.length} recent signals</span></div>
+      {signals.length === 0 ? <p className="sub">No signals received yet. Signal intake API is available for a verified host integration.</p> : <div className="table-wrap"><table><thead><tr><th>Market / Event</th><th>Occurred</th><th>Received</th><th>Subscriber intents</th></tr></thead><tbody>
+        {signals.map(signal => <tr key={signal.id}><td>{signal.market} · {signal.event}</td><td>{new Date(signal.occurredAt).toLocaleString()}</td><td>{new Date(signal.receivedAt).toLocaleString()}</td><td>{signal._count.copyIntents}</td></tr>)}
+      </tbody></table></div>}
     </section>
     <section className="card"><div className="section-head"><div><h2>Your listings</h2><p className="sub">Drafts remain private. Publish only after reviewing disclosures.</p></div><span className="pill">{listings.length} listings</span></div>
       {loading ? <p className="sub">Loading listings…</p> : listings.length === 0 ? <p className="sub">No listings created yet.</p> : listings.map(item => <article className="listing host-listing" key={item.id}>
