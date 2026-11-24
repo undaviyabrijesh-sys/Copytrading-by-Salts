@@ -17,5 +17,6 @@
   },
   "exports": {
     "./client": "./src/client.ts"
-  }
+  },
+  "type": "module"
 }
