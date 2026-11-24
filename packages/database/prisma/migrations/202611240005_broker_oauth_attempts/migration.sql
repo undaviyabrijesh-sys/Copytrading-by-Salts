@@ -15,3 +15,10 @@ CREATE UNIQUE INDEX "BrokerOAuthAttempt_stateHash_key" ON "BrokerOAuthAttempt"("
 CREATE INDEX "BrokerOAuthAttempt_userId_provider_createdAt_idx" ON "BrokerOAuthAttempt"("userId", "provider", "createdAt");
 CREATE INDEX "BrokerOAuthAttempt_connectionId_expiresAt_idx" ON "BrokerOAuthAttempt"("connectionId", "expiresAt");
 CREATE INDEX "BrokerOAuthAttempt_expiresAt_usedAt_idx" ON "BrokerOAuthAttempt"("expiresAt", "usedAt");
+
+ALTER TABLE "BrokerOAuthAttempt"
+  ADD CONSTRAINT "BrokerOAuthAttempt_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "BrokerOAuthAttempt"
+  ADD CONSTRAINT "BrokerOAuthAttempt_connectionId_fkey"
+  FOREIGN KEY ("connectionId") REFERENCES "BrokerConnection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
