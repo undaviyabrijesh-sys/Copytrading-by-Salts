@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@salts/database/client";
-import { currentUser } from "./auth.js";
+import { assertTrustedOrigin, currentUser } from "./auth.js";
 
 export async function registerSubscriptionRoutes(app: FastifyInstance) {
   app.get("/api/v1/subscriptions", async (request, reply) => {
