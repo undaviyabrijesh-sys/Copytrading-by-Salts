@@ -37,7 +37,7 @@ function assertTrustedOrigin(request: FastifyRequest) {
   }
 }
 
-async function currentUser(request: FastifyRequest): Promise<SafeUser | null> {
+export async function currentUser(request: FastifyRequest): Promise<SafeUser | null> {
   const token = cookieValue(request.headers.cookie, SESSION_COOKIE);
   if (!token) return null;
   let tokenHash: string;
