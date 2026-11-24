@@ -28,7 +28,7 @@ Branch: `phase1-foundation`
 ## Not yet complete
 
 - Recent MFA re-authentication can be further improved with a dedicated short-lived step-up challenge endpoint and session revocation management.
-- Admin UI and host application workflow. Admin APIs are available but still need frontend integration and integration tests.
+- Host application workflow, audit-log viewer and additional account recovery controls. Admin APIs and an initial owner console are implemented; frontend integration tests remain.
 - Broker connection wizard and KMS-backed broker credential encryption.
 - Database migrations, production deployment, operational secrets wiring and automated integration tests against PostgreSQL.
 - Paper execution engine, event lifecycle/replay, broker adapters and reconciliation.
