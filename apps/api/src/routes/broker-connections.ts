@@ -26,6 +26,7 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     assertTrustedOrigin(request);
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    if (!actor.totpEnabled || !actor.mfaVerifiedAt || Date.now() - actor.mfaVerifiedAt.getTime() > 10 * 60 * 1000) return reply.code(403).send({ error: "Enable authenticator MFA and complete a recent MFA verification before saving broker credentials." });
     const body = request.body as { provider: string; label: string; credentials: Record<string, string> };
     const provider = credentialProviders.find(item => item.id === body.provider);
     if (!provider) return reply.code(400).send({ error: "Unknown broker provider." });
@@ -64,6 +65,7 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     assertTrustedOrigin(request);
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
+    if (!actor.totpEnabled || !actor.mfaVerifiedAt || Date.now() - actor.mfaVerifiedAt.getTime() > 10 * 60 * 1000) return reply.code(403).send({ error: "Recent authenticator MFA verification is required to disconnect a broker account." });
     const { connectionId } = request.params as { connectionId: string };
     const existing = await prisma.brokerConnection.findFirst({ where: { id: connectionId, userId: actor.id }, select: { id: true, provider: true, market: true } });
     if (!existing) return reply.code(404).send({ error: "Broker connection not found." });
