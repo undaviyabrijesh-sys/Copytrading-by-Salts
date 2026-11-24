@@ -25,5 +25,6 @@ jobs:
       - run: pnpm --filter @salts/domain test
       - run: pnpm --filter @salts/api test
       - run: pnpm --filter @salts/domain typecheck
+      - run: pnpm --filter @salts/database build
       - run: pnpm --filter @salts/api typecheck
       - run: pnpm --filter @salts/web typecheck
