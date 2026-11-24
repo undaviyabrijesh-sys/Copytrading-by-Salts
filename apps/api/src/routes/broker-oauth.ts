@@ -4,7 +4,7 @@ import { prisma } from "@salts/database/client";
 import { currentUser, assertTrustedOrigin } from "./auth.js";
 import { decryptBrokerSecret, encryptBrokerSecret } from "../security/broker-vault.js";
 
-const supported = new Set(["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE"]);
+const supported = new Set(["ZERODHA", "UPSTOX", "FYERS", "ANGEL_ONE", "FIVE_PAISA"]);
 const hash = (v: string) => createHash("sha256").update(v).digest("hex");
 function expiryIST(hour: number, minute = 0) {
   const now = new Date();
@@ -36,7 +36,16 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     await prisma.brokerOAuthAttempt.updateMany({ where: { userId: actor.id, provider: connection.provider, usedAt: null }, data: { usedAt: new Date() } });
     await prisma.brokerOAuthAttempt.create({ data: { userId: actor.id, connectionId, provider: connection.provider, stateHash: hash(state), redirectUri, expiresAt } });
     let url: URL;
-    if (connection.provider === "ANGEL_ONE") {
+    if (connection.provider === "FIVE_PAISA") {
+      if (!credentials.clientId || !credentials.clientSecret || !credentials.userId) return reply.code(422).send({ error: "5paisa AppKey, encryption key and user ID are required." });
+      const loginEndpoint = process.env.FIVE_PAISA_OAUTH_URL;
+      if (!loginEndpoint) return reply.code(503).send({ error: "FIVE_PAISA_OAUTH_URL must be configured to the official 5paisa login endpoint for the selected environment." });
+      let loginUrl: URL;
+      try { loginUrl = new URL(loginEndpoint); } catch { return reply.code(503).send({ error: "5paisa login endpoint configuration is invalid." }); }
+      if (loginUrl.protocol !== "https:" || !["openapi.5paisa.com", "dev-openapi.5paisa.com"].includes(loginUrl.hostname)) return reply.code(503).send({ error: "5paisa login endpoint must use an official HTTPS 5paisa API host." });
+      url = loginUrl;
+      url.search = new URLSearchParams({ VendorKey: credentials.clientId, ResponseURL: redirectUri, State: state }).toString();
+    } else if (connection.provider === "ANGEL_ONE") {
       if (!credentials.apiKey) return reply.code(422).send({ error: "Angel One SmartAPI app API key is required." });
       url = new URL("https://smartapi.angelone.in/publisher-login");
       url.search = new URLSearchParams({ api_key: credentials.apiKey, redirect_url: redirectUri, state }).toString();
@@ -64,8 +73,8 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     const provider = raw.toUpperCase();
     if (!supported.has(provider)) return reply.code(404).send({ error: "Unsupported broker callback." });
     const q = request.query as Record<string, string | undefined>;
-    const state = provider === "ZERODHA" ? new URLSearchParams(q.redirect_params ?? "").get("state") ?? undefined : q.state;
-    const code = provider === "ZERODHA" ? q.request_token : provider === "FYERS" ? q.auth_code : provider === "ANGEL_ONE" ? q.auth_token : q.code;
+    const state = provider === "ZERODHA" ? new URLSearchParams(q.redirect_params ?? "").get("state") ?? undefined : provider === "FIVE_PAISA" ? q.state ?? q.State : q.state;
+    const code = provider === "ZERODHA" ? q.request_token : provider === "FYERS" ? q.auth_code : provider === "ANGEL_ONE" ? q.auth_token : provider === "FIVE_PAISA" ? q.RequestToken ?? q.requestToken : q.code;
     const origin = process.env.APP_ORIGIN;
     if (!origin) return reply.code(503).send({ error: "APP_ORIGIN is not configured." });
     const done = (s: string) => reply.redirect(`${origin}/connections?broker=${provider}&oauth=${s}`);
@@ -80,7 +89,24 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     try {
       const creds = await decryptBrokerSecret(connection.encryptedSecret);
       let token = "", accountId = "", expires = new Date(Date.now() + 60 * 60_000);
-      if (provider === "ANGEL_ONE") {
+      if (provider === "FIVE_PAISA") {
+        const r = await fetch("https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken", {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ head: { Key: creds.clientId }, body: { RequestToken: code, EncryKey: creds.clientSecret, UserId: creds.userId } }),
+          signal: AbortSignal.timeout(12_000), cache: "no-store"
+        });
+        const d = await payload(r);
+        const body = d.body as Record<string, unknown> | undefined;
+        const head = d.head as Record<string, unknown> | undefined;
+        if (!r.ok || head?.Status !== 0 || typeof body?.AccessToken !== "string" || typeof body.ClientCode !== "string") throw new Error("FIVE_PAISA_TOKEN_EXCHANGE_FAILED");
+        token = body.AccessToken; accountId = body.ClientCode; expires = expiryIST(23, 59);
+        const encrypted = await encryptBrokerSecret({ ...creds, accessToken: token, accountId });
+        await prisma.$transaction([
+          prisma.brokerConnection.update({ where: { id: connection.id }, data: { encryptedSecret: encrypted.ciphertext, keyFingerprint: encrypted.fingerprint, status: "CONNECTED", lastHealthAt: new Date(), tokenExpiresAt: expires, permissions: { authentication: "VERIFIED", accountIdentity: "VERIFIED", accountId, tradingPermission: "UNKNOWN", withdrawalPermission: "NOT_VERIFIED", liveExecution: "DISABLED" } } }),
+          prisma.auditEvent.create({ data: { actorId: attempt.userId, tenantId: attempt.userId, action: "BROKER_OAUTH_COMPLETED", targetType: "BrokerConnection", targetId: connection.id, requestId: request.id, metadata: { provider, accountId, tokenExpiresAt: expires.toISOString(), tradingPermission: "UNKNOWN" } } })
+        ]);
+        return done("connected");
+      } else if (provider === "ANGEL_ONE") {
         const feedToken = q.feed_token;
         if (!feedToken) throw new Error("ANGEL_ONE_FEED_TOKEN_MISSING");
         const pr = await fetch("https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile", {
