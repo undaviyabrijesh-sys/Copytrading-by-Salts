@@ -64,7 +64,7 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     }
     await prisma.auditEvent.create({ data: { actorId: actor.id, tenantId: actor.id, action: "BROKER_OAUTH_STARTED", targetType: "BrokerConnection", targetId: connection.id, requestId: request.id, metadata: { provider: connection.provider, expiresAt: expiresAt.toISOString() } } });
     reply.header("cache-control", "no-store");
-    return { authorizationUrl: url.toString(), expiresAt };
+    return { authorizationUrl: url.toString(), authorizationMethod, authorizationFields, expiresAt };
   });
 
   app.get("/api/v1/brokers/oauth/:provider/callback", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
