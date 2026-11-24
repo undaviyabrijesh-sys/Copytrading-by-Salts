@@ -19,7 +19,7 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
       properties: {
         provider: { type: "string", minLength: 2, maxLength: 40 },
         label: { type: "string", minLength: 2, maxLength: 60 },
-        credentials: { type: "object", minProperties: 1, maxProperties: 4, additionalProperties: { type: "string", minLength: 1, maxLength: 8192 } }
+        credentials: { type: "object", minProperties: 1, maxProperties: 5, additionalProperties: { type: "string", minLength: 1, maxLength: 8192 } }
       }
     } }
   }, async (request, reply) => {
@@ -30,11 +30,11 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
     const body = request.body as { provider: string; label: string; credentials: Record<string, string> };
     const provider = credentialProviders.find(item => item.id === body.provider);
     if (!provider) return reply.code(400).send({ error: "Unknown broker provider." });
-    if (!provider.connectEnabled) return reply.code(409).send({ error: "This provider requires an OAuth or broker-approved connection flow that is not enabled yet." });
-    const supplied = Object.keys(body.credentials).sort();
-    const required = provider.fields.map(field => field.key).sort();
-    if (supplied.length !== required.length || supplied.some((key, index) => key !== required[index])) {
-      return reply.code(400).send({ error: "Credential fields do not match this provider's required fields." });
+    if (!provider.connectEnabled || provider.fields.length === 0) return reply.code(409).send({ error: "Secure credential intake is not configured for this provider." });
+    const supplied = Object.keys(body.credentials);
+    const allowed = new Set(provider.fields.map(field => field.key));
+    if (supplied.length < 1 || supplied.some(key => !allowed.has(key))) {
+      return reply.code(400).send({ error: "Submit at least one supported broker-issued API credential field. Unknown fields are rejected." });
     }
     if (Object.values(body.credentials).some(value => !value.trim())) return reply.code(400).send({ error: "Credential values cannot be empty." });
     let encrypted;
@@ -58,7 +58,7 @@ export async function registerBrokerConnectionRoutes(app: FastifyInstance) {
       data: { actorId: actor.id, tenantId: actor.id, action: "BROKER_CONNECTION_CREDENTIALS_SAVED", targetType: "BrokerConnection", targetId: connection.id, requestId: request.id, metadata: { provider: provider.id, market: provider.market, vault: "AWS_KMS_ENVELOPE" } }
     });
     reply.header("cache-control", "no-store");
-    return reply.code(201).send({ connection, message: "Credentials encrypted and saved. Connection remains pending until account identity and provider permissions are verified." });
+    return reply.code(201).send({ connection, message: "Credentials encrypted and saved. This is credential intake only; connection remains PENDING until provider-specific authentication, account identity and permissions are verified." });
   });
 
   app.delete("/api/v1/brokers/connections/:connectionId", async (request, reply) => {
