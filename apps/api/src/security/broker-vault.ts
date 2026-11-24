@@ -27,9 +27,10 @@ export async function encryptBrokerSecret(secret: Record<string, string>): Promi
     EncryptionContext: context
   }));
   if (!generated.Plaintext || !generated.CiphertextBlob) throw new Error("BROKER_VAULT_KMS_FAILED");
+  const dataKey = Buffer.from(generated.Plaintext);
   const nonce = randomBytes(12);
   try {
-    const cipher = createCipheriv("aes-256-gcm", Buffer.from(generated.Plaintext), nonce);
+    const cipher = createCipheriv("aes-256-gcm", dataKey, nonce);
     cipher.setAAD(Buffer.from("salts-broker-credential-v1", "utf8"));
     const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
     const tag = cipher.getAuthTag();
@@ -45,7 +46,7 @@ export async function encryptBrokerSecret(secret: Record<string, string>): Promi
     return { ciphertext: Buffer.from(JSON.stringify(envelope), "utf8"), fingerprint };
   } finally {
     plaintext.fill(0);
-    Buffer.from(generated.Plaintext).fill(0);
+    dataKey.fill(0);
   }
 }
 
