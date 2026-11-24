@@ -79,7 +79,27 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     try {
       const creds = await decryptBrokerSecret(connection.encryptedSecret);
       let token = "", accountId = "", expires = new Date(Date.now() + 60 * 60_000);
-      if (provider === "UPSTOX") {
+      if (provider === "ANGEL_ONE") {
+        const feedToken = q.feed_token;
+        if (!feedToken) throw new Error("ANGEL_ONE_FEED_TOKEN_MISSING");
+        const pr = await fetch("https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getProfile", {
+          headers: {
+            Authorization: `Bearer ${code}`, "X-PrivateKey": creds.apiKey!,
+            "X-UserType": "USER", "X-SourceID": "WEB", Accept: "application/json"
+          },
+          signal: AbortSignal.timeout(10_000), cache: "no-store"
+        });
+        const pd = await payload(pr);
+        const data = pd.data as Record<string, unknown> | undefined;
+        if (!pr.ok || pd.status !== true || typeof data?.clientcode !== "string") throw new Error("ANGEL_ONE_PROFILE_FAILED");
+        token = code; accountId = data.clientcode; expires = expiryIST(0);
+        const encrypted = await encryptBrokerSecret({ ...creds, accessToken: token, feedToken, accountId });
+        await prisma.$transaction([
+          prisma.brokerConnection.update({ where: { id: connection.id }, data: { encryptedSecret: encrypted.ciphertext, keyFingerprint: encrypted.fingerprint, status: "CONNECTED", lastHealthAt: new Date(), tokenExpiresAt: expires, permissions: { authentication: "VERIFIED", accountIdentity: "VERIFIED", accountId, tradingPermission: "UNKNOWN", withdrawalPermission: "NOT_VERIFIED", liveExecution: "DISABLED" } } }),
+          prisma.auditEvent.create({ data: { actorId: attempt.userId, tenantId: attempt.userId, action: "BROKER_OAUTH_COMPLETED", targetType: "BrokerConnection", targetId: connection.id, requestId: request.id, metadata: { provider, accountId, tokenExpiresAt: expires.toISOString(), tradingPermission: "UNKNOWN" } } })
+        ]);
+        return done("connected");
+      } else if (provider === "UPSTOX") {
         const form = new URLSearchParams({ code, client_id: creds.clientId!, client_secret: creds.clientSecret!, redirect_uri: attempt.redirectUri, grant_type: "authorization_code" });
         const r = await fetch("https://api.upstox.com/v2/login/authorization/token", { method: "POST", headers: { accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" }, body: form, signal: AbortSignal.timeout(12_000), cache: "no-store" });
         const d = await payload(r);
