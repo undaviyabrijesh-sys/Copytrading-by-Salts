@@ -11,8 +11,9 @@ Branch: `phase1-foundation`
 - Login, invite redemption and invite issuance have per-route rate limits. Mutating auth/admin routes require exact `APP_ORIGIN` match.
 - TOTP MFA enrollment, encrypted secret storage (AES-256-GCM), authenticator verification, MFA login challenge and 10-minute admin step-up verification are implemented. The encryption key is supplied through `MFA_ENCRYPTION_KEY` and must be kept in a production secret manager.
 - Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites, approve HOST role, suspend/reactivate users, and revoke unused invites.
-- Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication.
+- Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication. Pausing, unpublishing or removing a listing also pauses its active subscriptions to prevent new routing.
 - Subscription endpoints support list, subscribe and unsubscribe. A subscription is linked to one listing and market, defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future routing must stop.
+- Initial host listing and subscriber marketplace pages are connected to these APIs. Hosts can create, edit, publish, pause and remove listings; subscribers can browse India/Crypto listings and subscribe/unsubscribe.
 - Audit events are written for invite creation, host listing changes and subscription changes.
 - Health readiness checks PostgreSQL connectivity; liveness remains independent.
 - The Prisma schema includes hashed session records and the shared database client package.
@@ -30,7 +31,7 @@ Branch: `phase1-foundation`
 - Recent MFA re-authentication can be further improved with a dedicated short-lived step-up challenge endpoint and session revocation management.
 - Host application workflow, audit-log viewer and additional account recovery controls. Admin APIs and an initial owner console are implemented; frontend integration tests remain.
 - Broker connection wizard and KMS-backed broker credential encryption.
-- Database migrations, production deployment, operational secrets wiring and automated integration tests against PostgreSQL.
+- Prisma initial PostgreSQL migration is committed, with deployment/status scripts and migration runbook. It has not yet been applied to a database or validated by a successful CI run.
 - Paper execution engine, event lifecycle/replay, broker adapters and reconciliation.
 
 ## Safety gates
