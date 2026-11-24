@@ -25,7 +25,7 @@ export function encodeBase32(input: Buffer): string {
   return output;
 }
 
-function decodeBase32(input: string): Buffer {
+export function decodeBase32(input: string): Buffer {
   let bits = 0, value = 0;
   const output: number[] = [];
   for (const char of input.toUpperCase().replace(/=+$/g, "")) {
