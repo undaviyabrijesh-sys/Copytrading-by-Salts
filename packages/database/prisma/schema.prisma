@@ -160,6 +160,22 @@ model BrokerConnection {
   @@index([userId, market])
 }
 
+model BrokerOAuthAttempt {
+  id              String   @id @default(cuid())
+  userId          String
+  connectionId    String
+  provider        String
+  stateHash       String   @unique
+  redirectUri     String
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+  metadata        Json?
+  @@index([userId, provider, createdAt])
+  @@index([connectionId, expiresAt])
+  @@index([expiresAt, usedAt])
+}
+
 model HostListing {
   id              String @id @default(cuid())
   hostUserId      String
