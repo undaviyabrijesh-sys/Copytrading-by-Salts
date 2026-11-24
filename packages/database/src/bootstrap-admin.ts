@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import argon2 from "argon2";
 
@@ -14,19 +13,14 @@ function requireSecret(name: string): string {
 
 async function main() {
   const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
-  const suppliedToken = requireSecret("ADMIN_BOOTSTRAP_TOKEN");
-  const expectedToken = requireSecret("ADMIN_BOOTSTRAP_EXPECTED_TOKEN");
+  if (process.env.ADMIN_BOOTSTRAP_CONFIRM !== "CREATE_FIRST_ADMIN") {
+    throw new Error("Set ADMIN_BOOTSTRAP_CONFIRM=CREATE_FIRST_ADMIN to confirm one-time owner provisioning.");
+  }
   const password = requireSecret("ADMIN_BOOTSTRAP_PASSWORD");
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("ADMIN_BOOTSTRAP_EMAIL must be a valid email address.");
   }
-  const supplied = Buffer.from(suppliedToken);
-  const expected = Buffer.from(expectedToken);
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
-    throw new Error("Bootstrap authorization failed.");
-  }
-
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
   const admin = await prisma.$transaction(async (tx) => {
     const existingAdmin = await tx.user.findFirst({ where: { roles: { has: "ADMIN" } }, select: { id: true } });
@@ -46,7 +40,7 @@ async function main() {
   }, { isolationLevel: "Serializable" });
 
   console.info("Initial administrator created:", admin.email);
-  console.info("Remove ADMIN_BOOTSTRAP_TOKEN, ADMIN_BOOTSTRAP_EXPECTED_TOKEN and ADMIN_BOOTSTRAP_PASSWORD from the runtime immediately.");
+  console.info("Remove ADMIN_BOOTSTRAP_CONFIRM and ADMIN_BOOTSTRAP_PASSWORD from the runtime immediately.");
 }
 
 main()
