@@ -64,3 +64,10 @@ Current source-level auth/account-verification implementations: Zerodha, Upstox,
 A provider registry test now asserts the expected split and prevents a credential form from being interpreted as account authentication or execution readiness. This is a source change only; it has not yet been executed successfully because the latest GitHub Actions run fails at job initialization with `steps: null` and no job logs. No test pass is claimed.
 
 Latest branch head: `9e6312bad84f236cc1edcbf19eb0b6f0ac820cde`.
+
+
+## Phase 2 groundwork added — 24 November 2026
+
+Canonical instrument validation now rejects malformed contract identity, invalid tick/lot/multiplier values and incomplete option specifications. Copy eligibility checks that the mapped destination segment is declared by the adapter capability profile. Lifecycle gates now require exact target order IDs for order modifications/cancellations and a reconciled position quantity before partial exits; partial-exit sizing uses exact decimal arithmetic and cannot exceed the copied open quantity. The connections UI now reads credential field keys and labels from the API provider registry rather than maintaining a second independent credential-key contract.
+
+Tests have been added for these rules but remain unexecuted/unverified due the GitHub Actions job-initialization failure (no steps/logs). No broker execution adapter or live trading capability is introduced by these changes.
