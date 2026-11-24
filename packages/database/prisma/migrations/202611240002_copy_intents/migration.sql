@@ -1,4 +1,8 @@
 
+-- Scope source idempotency to the host tenant instead of globally.
+DROP INDEX "Signal_idempotencyKey_key";
+CREATE UNIQUE INDEX "Signal_hostUserId_idempotencyKey_key" ON "Signal"("hostUserId", "idempotencyKey");
+
 -- Durable per-subscriber fan-out intents. This records routing work only;
 -- no broker order is submitted by this migration or the intake endpoint.
 CREATE TYPE "CopyIntentStatus" AS ENUM ('QUEUED', 'PROCESSING', 'ELIGIBLE', 'SKIPPED', 'COMPLETED', 'FAILED');
