@@ -18,6 +18,7 @@ export default function Home() {
         <div className="nav-title">ACCOUNT</div>
         <a className="nav-item" href="/marketplace">Subscriptions</a>
         <a className="nav-item" href="/connections">Broker connections</a>
+        <a className="nav-item" href="/security">Security / MFA</a>
         <a className="nav-item" href="#settings">Copy settings</a>
         <a className="nav-item" href="#activity">Copy activity</a>
         <div className="nav-title">CONTROL</div>
