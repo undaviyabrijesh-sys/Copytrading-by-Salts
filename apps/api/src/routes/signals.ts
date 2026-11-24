@@ -122,14 +122,16 @@ export async function registerSignalRoutes(app: FastifyInstance) {
         const subscriptions = await tx.hostSubscription.findMany({
           where: {
             hostUserId: actor.id, market: body.market, status: "ACTIVE", mode: "PAPER",
+            subscriber: { status: "ACTIVE" },
             listing: { status: "PUBLISHED" }
           },
-          select: { id: true, subscriberId: true, settings: true }
+          select: { id: true, subscriberId: true, destinationConnectionId: true, settings: true }
         });
         if (subscriptions.length) {
           await tx.copyIntent.createMany({
             data: subscriptions.map((sub) => ({
               signalId: signal.id, subscriptionId: sub.id, subscriberId: sub.subscriberId,
+              destinationConnectionId: sub.destinationConnectionId,
               status: "QUEUED"
             })),
             skipDuplicates: true
