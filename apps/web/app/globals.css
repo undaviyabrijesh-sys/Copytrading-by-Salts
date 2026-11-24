@@ -80,3 +80,19 @@ td small { display:block; color:#8fa4c2; margin-top:5px; }
 .secret-box { padding:14px; margin:12px 0; background:#0a1422; border:1px dashed #55749b; border-radius:8px; font-family:monospace; letter-spacing:.08em; overflow-wrap:anywhere; }
 .admin-label { margin:16px 0; max-width:300px; }
 @media(max-width:700px) { .admin-header { align-items:flex-start; flex-direction:column; } .auth-card { padding:22px; } .invite-output { align-items:stretch; flex-direction:column; } }
+
+.auth-form select,.auth-form textarea { width:100%; border:1px solid #344762; border-radius:8px; background:#0b1422; color:var(--text); padding:12px; outline:none; resize:vertical; font:inherit; }
+.auth-form select:focus,.auth-form textarea:focus { border-color:#6c9ee9; box-shadow:0 0 0 3px rgba(108,158,233,.12); }
+.host-listing,.marketplace-listing { align-items:flex-start; }
+.host-listing > div:first-child,.marketplace-listing > div:first-child { flex:1; min-width:0; }
+.listing-meta { display:flex; align-items:center; gap:9px; margin-bottom:10px; flex-wrap:wrap; }
+.listing-meta .pill { padding:5px 9px; }
+.listing-state { display:inline-block; color:#b8d6ff; border:1px solid #395a80; background:#14283f; border-radius:99px; padding:5px 9px; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.state-published { color:#9ce6c8; border-color:#356d58; background:#102c23; }
+.state-paused,.state-draft { color:#f2d49a; border-color:#66542e; background:#2a2417; }
+.listing-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.danger-button { border-color:#78434b; color:#ffb9c0; }
+.marketplace-listing details { margin-top:12px; color:#b9c8dd; font-size:11px; }
+.marketplace-listing summary { cursor:pointer; color:#8db7ff; }
+.marketplace-listing > div:last-child { min-width:140px; display:flex; justify-content:flex-end; }
+@media(max-width:700px) { .host-listing,.marketplace-listing { flex-direction:column; } .listing-actions { justify-content:flex-start; } .marketplace-listing > div:last-child { justify-content:flex-start; } }
