@@ -39,6 +39,51 @@ Primary references:
 - NSE algo / Client Direct API guidance (updated May 27, 2026): https://betanseapi.nseindia.com/static/trade/platform-services-non-neat-decision-support-tools-algorithm-trading
 - SEBI Master Circular / relevant algo provisions (June 2025 PDF): https://www.sebi.gov.in/sebi_data/attachdocs/jun-2025/1750158789381.pdf
 
+
+### Multi-user roles, host listings and separate market workspaces
+
+This is a multi-user platform, not a private dashboard for one person's broker account. It must support many independent users with role-based capabilities:
+
+- **Host account:** a user approved by the platform admin to publish one or more host profiles/listings, connect the host's own broker/exchange accounts, configure the market(s) they offer, publish verified profile information, and originate trades.
+- **Subscriber/client account:** a user who joins through an invite, connects their own broker/exchange accounts, reviews host listings, subscribes/unsubscribes, and configures independent copy settings and risk limits.
+- **Platform admin:** approves host privileges, manages invites and access, reviews listings/reports, handles abuse/support, and operates global safety controls. Admin access is not automatically granted to a host.
+- A user may be both a host and a subscriber if explicitly enabled; their roles, connections, positions and permissions remain separated.
+
+**Host listing / discovery desk:** hosts can create, edit, pause, unpublish and remove their own listing. A listing contains host display name/profile, India and/or Crypto availability, supported instruments/segments, broker/exchange and connection status at a safe non-secret level, trading style/risk disclosures, copy settings supported, minimum capital guidance where legally approved, verified operational statistics only when legally cleared, and last-updated status. Subscribers can inspect the listing, review disclosures and subscribe or unsubscribe. Listings are invite-gated/private; no public marketplace, payments, commissions, subscription billing or paid promotion. Any use of the word “advertisement” means a host-authored informational listing, not a paid ad. Admin can suspend a listing. A host cannot see subscriber credentials, balances or unrelated account data.
+
+**Subscriptions are per host and per market:** a subscriber may follow multiple approved hosts only where enabled, with separate sizing, risk limits, broker connection selection and pause controls for each host/market pair. Unsubscribing blocks new copied entries immediately and applies a clearly defined safe policy to already-open copied positions (default: do not abandon risk; ask the subscriber to choose close-following or manage-existing, with the selected behavior disclosed and audited).
+
+**Two distinct trading workspaces:** India and Crypto must be visibly and operationally separated in the product, not mixed into one broker selector or one set of settings:
+- India workspace: Indian equities, F&O and supported commodity segments; India broker connections, exchange sessions, lot sizes, freeze limits, static-IP/vendor approvals, INR balances and India-specific legal gates.
+- Crypto workspace: eligible crypto exchanges and spot/futures/perpetual products; exchange-specific symbols, tick/step/min-notional rules, funding, leverage, reduce-only/position mode and 24/7 risk controls; USD/USDT/INR display as appropriate and withdrawal-disabled API scopes.
+- A user can enable India, Crypto or both. Each workspace has its own host listings/subscriptions, broker connections, instruments, risk profile, paper/live state, positions, orders, notifications and performance reporting. No accidental cross-market signal or credential routing is permitted. Shared identity, audit, notification and orchestration foundations are allowed, but market-specific adapters, policies and data scopes remain explicit.
+
+### Guided broker onboarding for every user
+
+Every host and subscriber gets a provider-specific connection wizard; there is no assumption that the platform operator connects accounts on their behalf. The wizard must guide users through: selecting India or Crypto; choosing a supported provider; opening the provider's official developer portal; creating an app/API key; setting exact redirect/callback and allowed IP values; selecting the minimum required read/trade permissions; entering credentials only into the secured connection flow; completing OAuth/TOTP/provider login; testing authentication, account identity, permissions, funds/margin read, market-data stream, order capabilities and static-IP status; and resolving provider-specific errors. The UI links only to official provider instructions and records the documentation version/check date.
+
+Never ask for withdrawal/transfer permissions. Never display or log a full secret after save. Show connection owner, provider, masked key fingerprint, permission scope, token expiry/health, last test, static IP status and supported capabilities. Provide reconnect, rotate credentials, test, disconnect and delete flows. If a provider requires manual broker approval or an approved vendor relationship, show that as a hard blocker—not as a successful connection.
+
+### Cross-broker / cross-exchange copy execution
+
+Host and subscriber are expected to use different providers. The host's provider is only the source of authoritative host order/trade events; each subscriber's selected provider is the destination. The engine must translate a canonical trade intent through the destination adapter and must never forward raw broker payloads or assume provider order IDs, symbols, order types or statuses are interchangeable.
+
+For each source and destination pair, resolve a canonical instrument identity using exchange/venue, segment, underlying, expiry, strike, option type, contract size and currency. Require an explicit, verified mapping. If no equivalent instrument or permitted destination product exists, skip that subscriber order with a clear reason; never silently substitute a different contract, expiry, strike, venue or product.
+
+Maintain a broker capability matrix by provider, segment and account type. It must record whether each adapter supports market, limit, stop-loss limit, stop-market (where available), trigger/limit prices, product types, validity, AMO/session orders, iceberg/slicing, bracket/cover/OCO where supported, modify, cancel, partial fills, disclosed quantity, trailing stop, reduce-only, hedge/one-way position mode, WebSocket order updates and trade history. Capabilities are verified from current official docs and live sandbox/contract tests; unsupported features are disabled in the UI and rejected safely by the engine.
+
+The canonical lifecycle must cover every host order change, not just initial BUY/SELL:
+- new entry; market/limit/triggered stop entry; accepted/rejected/partial/full fill;
+- quantity and price modification; trigger/limit modification; cancellation;
+- partial exit, full exit and square-off;
+- stop-loss / take-profit placement, modification, cancellation and trailing updates;
+- multi-leg and multi-target strategy events, per-leg quantities and per-leg stop movement;
+- host order rejection, host cancel-before-fill, late fill after cancel request, reconnect/replay and out-of-order updates.
+
+**Important:** “copy every order without error” is the product objective, but cannot be guaranteed across brokers. Providers differ in order types, product modes, rate limits, market sessions, margin, instrument availability and event timing. The correct safety behavior is deterministic: copy only when the destination can faithfully represent the intent; otherwise block/skip that subscriber leg, explain why, notify, and preserve the host event and audit trail. Never approximate a stop order with a market order or convert an unsupported order type without explicit user-approved policy. Track host and subscriber order/fill states independently, including partial-fill quantities, and reconcile against broker truth.
+
+Cross-provider test coverage is mandatory: source-provider × destination-provider × segment × order type/capability matrix. Start with paper/simulated adapters and contract fixtures; expand real providers only after their current official docs, API terms, auth, static-IP and third-party platform permissions are verified. A broker being listed in the selector does not mean live copy is approved.
+
 ---
 
 ## 2. Recommended architecture
