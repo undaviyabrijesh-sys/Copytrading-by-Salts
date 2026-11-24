@@ -12,7 +12,7 @@ Branch: `phase1-foundation`
 - Admin invite issuance and user management require ADMIN role plus recent MFA verification. Admin APIs can list users/invites, approve HOST role, suspend/reactivate users, and revoke unused invites.
 - Host listing endpoints support create, list, edit, publish, pause and soft-remove. Every host query is scoped by the authenticated host user ID. Marketplace listing reads require authentication. Pausing, unpublishing or removing a listing also pauses its active subscriptions to prevent new routing.
 - Subscription endpoints support list, subscribe, unsubscribe and subscriber-owned risk-setting updates. A subscription is linked to one listing and market, defaults to PAPER mode, rejects self-subscription, stores subscriber sizing caps, and marks unsubscribe as `UNSUBSCRIBED` so future entries must stop.
-- Initial host listing and subscriber marketplace pages are connected to these APIs. Hosts can create, edit, publish, pause and remove listings; subscribers can browse India/Crypto listings, subscribe/unsubscribe, set a quantity multiplier and optional max order value.
+- Initial host listing and subscriber marketplace pages are connected to these APIs. Hosts can create, edit, publish, pause and remove listings; subscribers can browse India/Crypto listings, subscribe/unsubscribe, set a quantity multiplier and optional max order value. Authenticated admin/host/marketplace pages include sign-out controls.
 - Audit events are written for invite creation, host listing changes and subscription changes.
 - Health readiness checks PostgreSQL connectivity; liveness remains independent.
 - The Prisma schema includes hashed session records and the shared database client package.
