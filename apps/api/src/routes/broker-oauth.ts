@@ -36,7 +36,11 @@ export async function registerBrokerOAuthRoutes(app: FastifyInstance) {
     await prisma.brokerOAuthAttempt.updateMany({ where: { userId: actor.id, provider: connection.provider, usedAt: null }, data: { usedAt: new Date() } });
     await prisma.brokerOAuthAttempt.create({ data: { userId: actor.id, connectionId, provider: connection.provider, stateHash: hash(state), redirectUri, expiresAt } });
     let url: URL;
-    if (connection.provider === "ANGEL_ONE") {\n      if (!credentials.apiKey) return reply.code(422).send({ error: "Angel One SmartAPI app API key is required." });\n      url = new URL("https://smartapi.angelone.in/publisher-login");\n      url.search = new URLSearchParams({ api_key: credentials.apiKey, redirect_url: redirectUri, state }).toString();\n    } else if (connection.provider === "UPSTOX") {
+    if (connection.provider === "ANGEL_ONE") {
+      if (!credentials.apiKey) return reply.code(422).send({ error: "Angel One SmartAPI app API key is required." });
+      url = new URL("https://smartapi.angelone.in/publisher-login");
+      url.search = new URLSearchParams({ api_key: credentials.apiKey, redirect_url: redirectUri, state }).toString();
+    } else if (connection.provider === "UPSTOX") {
       if (!credentials.clientId || !credentials.clientSecret) return reply.code(422).send({ error: "Upstox client ID and secret are required." });
       url = new URL("https://api.upstox.com/v2/login/authorization/dialog");
       url.search = new URLSearchParams({ response_type: "code", client_id: credentials.clientId, redirect_uri: redirectUri, state }).toString();
