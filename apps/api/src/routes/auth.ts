@@ -7,7 +7,7 @@ import { hashOpaqueToken, issueOpaqueToken } from "../security/opaque-tokens.js"
 const SESSION_COOKIE = "salts_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-type SafeUser = { id: string; email: string; displayName: string; roles: string[] };
+type SafeUser = { id: string; email: string; displayName: string; roles: string[]; totpEnabled: boolean };
 
 function cookieValue(header: string | undefined, name: string): string | null {
   if (!header) return null;
@@ -44,7 +44,7 @@ async function currentUser(request: FastifyRequest): Promise<SafeUser | null> {
   try { tokenHash = hashOpaqueToken(token); } catch { return null; }
   const session = await prisma.session.findFirst({
     where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() }, user: { status: "ACTIVE" } },
-    select: { id: true, user: { select: { id: true, email: true, displayName: true, roles: true } } }
+    select: { id: true, user: { select: { id: true, email: true, displayName: true, roles: true, totpEnabled: true } } }
   });
   if (!session) return null;
   void prisma.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
@@ -107,6 +107,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const actor = await currentUser(request);
     if (!actor) return reply.code(401).send({ error: "Authentication required." });
     if (!actor.roles.includes("ADMIN")) return reply.code(403).send({ error: "Administrator permission required." });
+    if (!actor.totpEnabled) return reply.code(403).send({ error: "MFA enrollment is required before administrator actions are enabled." });
     const body = (request.body ?? {}) as { expiresInDays?: number };
     const expiresInDays = body.expiresInDays ?? 7;
     const issued = issueOpaqueToken();
