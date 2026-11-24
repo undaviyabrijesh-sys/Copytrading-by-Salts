@@ -45,7 +45,14 @@ enum SubscriptionStatus {
   PAUSED
   UNSUBSCRIBED
 }
-enum CopyIntentStatus {\n  QUEUED\n  PROCESSING\n  ELIGIBLE\n  SKIPPED\n  COMPLETED\n  FAILED\n}\nenum CopyOrderStatus {
+enum CopyIntentStatus {
+  QUEUED
+  PROCESSING
+  ELIGIBLE
+  SKIPPED
+  COMPLETED
+  FAILED
+}\nenum CopyOrderStatus {
   QUEUED
   SKIPPED
   SUBMITTED
@@ -179,6 +186,7 @@ model HostSubscription {
   host        User @relation("HostSubscriptions", fields: [hostUserId], references: [id])
   subscriber  User @relation("SubscriberSubscriptions", fields: [subscriberId], references: [id])
   listing     HostListing @relation(fields: [listingId], references: [id])
+  copyIntents CopyIntent[]
   @@unique([subscriberId, listingId])
   @@index([subscriberId, market, status])
   @@index([hostUserId])
@@ -197,6 +205,7 @@ model Signal {
   occurredAt      DateTime
   receivedAt      DateTime @default(now())
   copyOrders      CopyOrder[]
+  copyIntents     CopyIntent[]
   @@index([hostUserId, market, occurredAt])
 }
 
