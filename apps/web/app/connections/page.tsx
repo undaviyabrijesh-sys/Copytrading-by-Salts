@@ -90,7 +90,7 @@ export default function ConnectionsPage() {
     ANGEL_ONE:{apiKey:"SmartAPI app API key (api_key)"},
     UPSTOX:{clientId:"Upstox API key / client ID (client_id)",clientSecret:"Upstox API secret (client_secret)"},
     FYERS:{clientId:"FYERS app ID (app_id)",clientSecret:"FYERS app secret (app_secret)"},
-    SHOONYA:{clientId:"Shoonya user/client ID (uid)",clientSecret:"Shoonya app/API secret code (susertoken/app key as specified by current app flow)"},
+    SHOONYA:{clientId:"Shoonya client ID (exact account/app label to be confirmed against current official flow)",clientSecret:"Shoonya secret code (exact field contract to be confirmed before connection is enabled)"},
     FLATTRADE:{apiKey:"Flattrade API key (api_key)",apiSecret:"Flattrade API secret (api_secret)"},
     FIVE_PAISA:{clientId:"5paisa app key (app_key)",clientSecret:"5paisa encryption key (encryption_key)"},
     ICICI_BREEZE:{apiKey:"Breeze API app key (api_key)",apiSecret:"Breeze API secret key (api_secret)"},
