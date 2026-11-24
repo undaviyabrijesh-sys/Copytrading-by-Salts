@@ -8,7 +8,7 @@ import { decryptTotpSecret, newTotpSecret, totpProvisioningUri, verifyTotp } fro
 const SESSION_COOKIE = "salts_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-type SafeUser = { id: string; email: string; displayName: string; status: "ACTIVE"; roles: string[]; totpEnabled: boolean; sessionId: string; mfaVerifiedAt: Date | null };
+type SafeUser = { id: string; email: string; displayName: string; status: string; roles: string[]; totpEnabled: boolean; sessionId: string; mfaVerifiedAt: Date | null };
 
 function cookieValue(header: string | undefined, name: string): string | null {
   if (!header) return null;
