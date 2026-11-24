@@ -8,7 +8,9 @@
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/security/*.test.ts"
+    "test": "tsx --test src/security/*.test.ts",
+    "prebuild": "pnpm --filter @salts/database build",
+    "pretypecheck": "pnpm --filter @salts/database build"
   },
   "dependencies": {
     "fastify": "^5.3.3",
