@@ -65,7 +65,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     schema: { body: {
       type: "object", additionalProperties: false,
       required: ["email", "password"],
-      properties: { email: { type: "string", maxLength: 254 }, password: { type: "string", minLength: 1, maxLength: 1024 } }
+      properties: { email: { type: "string", maxLength: 254 }, password: { type: "string", minLength: 1, maxLength: 1024 }, totpCode: { type: "string", pattern: "^[0-9]{6}$" } }
     } }
   }, async (request, reply) => {
     assertTrustedOrigin(request);
