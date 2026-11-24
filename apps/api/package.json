@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "tsx --test src/security/*.test.ts"
   },
   "dependencies": {
     "fastify": "^5.3.3"
