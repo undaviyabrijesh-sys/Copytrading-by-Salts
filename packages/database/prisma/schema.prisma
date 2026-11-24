@@ -80,6 +80,7 @@ model User {
   status          UserStatus @default(INVITED)
   roles           UserRole[] @default([SUBSCRIBER])
   totpEnabled     Boolean @default(false)
+  totpSecretEncrypted Bytes?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   connections     BrokerConnection[]
@@ -238,6 +239,7 @@ model Session {
   revokedAt   DateTime?
   createdAt   DateTime @default(now())
   lastSeenAt  DateTime @default(now())
+  mfaVerifiedAt DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, expiresAt])
 }
