@@ -27,11 +27,11 @@ Branch: `phase1-foundation`
 
 ## Not yet complete
 
-- Recent MFA re-authentication can be further improved with a dedicated short-lived step-up challenge endpoint and session revocation management.
+- Account recovery, MFA reset and administrative session revocation UX remain to be implemented.
 - Host application workflow, audit-log viewer and additional account recovery controls. Admin APIs and an initial owner console are implemented; frontend integration tests remain.
 - Broker connection wizard and KMS-backed broker credential encryption.
-- Prisma initial PostgreSQL migration is committed, with deployment/status scripts and migration runbook. It has not yet been applied to a database or validated by a successful CI run.
-- Paper execution engine, event lifecycle/replay, broker adapters and reconciliation.
+- Prisma initial PostgreSQL migration is committed, with deployment/status scripts and migration runbook. It has not yet been applied to a database or validated by a successful CI run. CI now provisions ephemeral PostgreSQL and attempts schema validation/migration; GitHub is still reporting a job-level failure with no step list or downloadable logs.
+- Paper execution engine, event lifecycle/replay, broker adapters and reconciliation. The current paper-routing policy is a pure domain gate with unit tests added, not an active copy worker.
 
 ## Safety gates
 
