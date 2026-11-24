@@ -108,14 +108,16 @@ export function evaluatePaperRouting(input: {
     return { eligible: false, code: "LINKED_POSITION_NOT_FOUND", reason: "Management event has no linked copied position or order at this subscriber." };
   }
 
-  if (!signal.orderType) return { eligible: false, code: "ORDER_TYPE_MISSING", reason: "Signal does not contain a normalized order type." };
-  if (sub.settings.allowedOrderTypes && !sub.settings.allowedOrderTypes.includes(signal.orderType)) {
+  if (isEntry && !signal.orderType) return { eligible: false, code: "ORDER_TYPE_MISSING", reason: "Signal does not contain a normalized order type." };
+  if (signal.orderType && sub.settings.allowedOrderTypes && !sub.settings.allowedOrderTypes.includes(signal.orderType)) {
     return { eligible: false, code: "SUBSCRIBER_ORDER_TYPE_BLOCKED", reason: "Subscriber risk settings do not allow this order type." };
   }
 
   if (!isEntry) {
+    if (!dest.instrumentMapped || !dest.destinationInstrument || dest.destinationInstrument.market !== dest.market) return { eligible: false, code: "INSTRUMENT_NOT_MAPPED", reason: "Existing position management requires a verified destination instrument mapping." };
+    if (signal.orderType && !dest.capabilities.orderTypes.includes(signal.orderType)) return { eligible: false, code: "ORDER_TYPE_UNSUPPORTED", reason: "Destination adapter does not support the management order type." };
     if (!dest.capabilities.supportsOrderEvents) return { eligible: false, code: "ORDER_EVENTS_UNSUPPORTED", reason: "Destination adapter cannot safely process order lifecycle events." };
-    if (signal.event === "CANCEL" && !dest.capabilities.supportsCancel) return { eligible: false, code: "CANCEL_UNSUPPORTED", reason: "Destination adapter does not support cancellation." };
+    if (["CANCEL", "CANCEL_STOP_LOSS", "CANCEL_TAKE_PROFIT"].includes(signal.event) && !dest.capabilities.supportsCancel) return { eligible: false, code: "CANCEL_UNSUPPORTED", reason: "Destination adapter does not support cancellation." };
     if (["MODIFY_ORDER", "MODIFY_STOP_LOSS", "MODIFY_TAKE_PROFIT", "TRAIL_STOP"].includes(signal.event) && !dest.capabilities.supportsModify) {
       return { eligible: false, code: "MODIFY_UNSUPPORTED", reason: "Destination adapter does not support this modification." };
     }
@@ -137,16 +139,19 @@ export function evaluatePaperRouting(input: {
   if (!quantity || compareDecimals(sourceQuantity, "0") === null || compareDecimals(sourceQuantity, "0")! <= 0 || compareDecimals(multiplier, "0") === null || compareDecimals(multiplier, "0")! <= 0 || compareDecimals(quantity, "0")! <= 0) {
     return { eligible: false, code: "INVALID_SIZING", reason: "Subscriber sizing multiplier or source quantity is invalid." };
   }
-  if (sub.settings.maxQuantity !== undefined && compareDecimals(quantity, String(sub.settings.maxQuantity))! > 0) {
+  const maxQuantityComparison = sub.settings.maxQuantity === undefined ? null : compareDecimals(quantity, String(sub.settings.maxQuantity));
+  if (sub.settings.maxQuantity !== undefined && (maxQuantityComparison === null || maxQuantityComparison > 0)) {
     return { eligible: false, code: "MAX_QUANTITY", reason: "Calculated quantity exceeds the subscriber maximum quantity." };
   }
-  const price = signal.price ?? "";
-  const orderValue = multiplyDecimals(quantity, price);
-  if (!orderValue || compareDecimals(price, "0") === null || compareDecimals(price, "0")! <= 0) {
-    return { eligible: false, code: "PRICE_REQUIRED", reason: "A valid reference price is required to enforce the subscriber order-value cap." };
-  }
-  if (sub.settings.maxOrderValue !== undefined && compareDecimals(orderValue, String(sub.settings.maxOrderValue))! > 0) {
-    return { eligible: false, code: "MAX_ORDER_VALUE", reason: "Calculated order value exceeds the subscriber maximum." };
+  if (sub.settings.maxOrderValue !== undefined) {
+    const price = signal.price ?? "";
+    const orderValue = multiplyDecimals(quantity, price);
+    const priceComparison = compareDecimals(price, "0");
+    if (!orderValue || priceComparison === null || priceComparison <= 0) return { eligible: false, code: "PRICE_REQUIRED", reason: "A valid reference price is required to enforce the subscriber order-value cap." };
+    const valueComparison = compareDecimals(orderValue, String(sub.settings.maxOrderValue));
+    if (valueComparison === null || valueComparison > 0) {
+      return { eligible: false, code: "MAX_ORDER_VALUE", reason: "Calculated order value exceeds the subscriber maximum." };
+    }
   }
   const copy = evaluateCopyRequest({
     sourceMarket: signal.market,
