@@ -1,8 +1,9 @@
 "use client";
 
 import LogoutButton from "../../components/logout-button.js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+type Connection = { id:string; market:"INDIA"|"CRYPTO"; provider:string; label:string; status:string; createdAt:string };
 type Broker = {
   id: string; name: string; market: "INDIA" | "CRYPTO"; status: "DOCUMENTED" | "REVIEW_REQUIRED" | "BLOCKED";
   auth: string; credentialFields: string[]; setup: string[]; restrictions: string[]; docsUrl: string; docsLabel: string;
@@ -32,6 +33,17 @@ export default function ConnectionsPage() {
   const [credentials,setCredentials] = useState<Record<string,string>>({});
   const [saving,setSaving] = useState(false);
   const [connectionMessage,setConnectionMessage] = useState("");
+  const [connections,setConnections] = useState<Connection[]>([]);
+  async function loadConnections() {
+    try { const response=await fetch("/api/v1/brokers/connections",{credentials:"include"}); if(response.ok){const data=await response.json();setConnections(data.connections ?? []);} } catch { /* Account list remains unavailable until API recovers. */ }
+  }
+  useEffect(()=>{void loadConnections();},[]);
+  async function removeConnection(id:string) {
+    const response=await fetch(`/api/v1/brokers/connections/${id}`,{method:"DELETE",credentials:"include",headers:{"content-type":"application/json"}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){setConnectionMessage(data.error ?? "Unable to disconnect account.");return;}
+    await loadConnections();
+  }
   const list = useMemo(()=>BROKERS.filter(b=>b.market===market && (b.name.toLowerCase().includes(query.toLowerCase()) || b.id.toLowerCase().includes(query.toLowerCase()))),[market,query]);
   const broker = BROKERS.find(b=>b.id===selected && b.market===market) ?? list[0];
   const credentialKeys = broker?.id === "DELTA_INDIA" ? ["apiKey","apiSecret"] : broker?.id === "DHAN" || broker?.id === "GROWW" ? ["accessToken"] : [];
@@ -44,13 +56,14 @@ export default function ConnectionsPage() {
       if (!response.ok) throw new Error(data.error ?? "Unable to save broker credentials.");
       setCredentials({});
       setConnectionMessage(data.message ?? "Credentials saved. Connection is pending verification.");
+      await loadConnections();
     } catch (error) { setConnectionMessage(error instanceof Error ? error.message : "Unable to save credentials."); }
     finally { setSaving(false); }
   }
   return <main className="admin-wrap">
     <header className="admin-header"><div><div className="brand">SALTS <span>●</span> COPY DESK</div><p className="eyebrow">ACCOUNT WORKSPACE · BROKER CONNECTIONS</p><h1>Connect a broker</h1><p className="sub">Every user connects their own account. India and Crypto credentials are stored and routed separately.</p></div><div className="header-actions"><a className="text-link" href="/">← Overview</a><LogoutButton /></div></header>
     <div className="market-switch"><button className={market==="INDIA"?"market selected":"market"} onClick={()=>{setMarket("INDIA");setSelected("ZERODHA");}}>India brokers</button><button className={market==="CRYPTO"?"market selected":"market"} onClick={()=>{setMarket("CRYPTO");setSelected("DELTA_INDIA");}}>Crypto exchanges</button></div>
-    <section className="card"><div className="section-head"><div><h2>Your broker accounts</h2><p className="sub">Connection records are private to your login. A host's credentials are never visible to subscribers, and subscriber accounts are never shared with hosts.</p></div><span className="pill">KMS vault required</span></div><p className="sub">API-token connections are submitted only to the server-side AWS KMS envelope vault. If the managed vault is not configured, the API rejects the request without storing credentials. OAuth providers remain disabled until their callback flows are implemented.</p><a className="text-link" href="/marketplace">Continue to marketplace →</a></section>
+    <section className="card"><div className="section-head"><div><h2>Your broker accounts</h2><p className="sub">Connection records are private to your login. A host's credentials are never visible to subscribers, and subscriber accounts are never shared with hosts.</p></div><span className="pill">KMS vault required</span></div><p className="sub">API-token connections are submitted only to the server-side AWS KMS envelope vault. If the managed vault is not configured, the API rejects the request without storing credentials. OAuth providers remain disabled until their callback flows are implemented.</p>{connections.length===0 ? <p className="sub">No broker connection records yet.</p> : <div className="table-wrap"><table><thead><tr><th>Provider</th><th>Workspace</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>{connections.map(connection=><tr key={connection.id}><td>{connection.provider} · {connection.label}</td><td>{connection.market}</td><td>{connection.status}</td><td>{new Date(connection.createdAt).toLocaleString()}</td><td><button className="quiet-button" onClick={()=>void removeConnection(connection.id)}>Disconnect</button></td></tr>)}</tbody></table></div>}<a className="text-link" href="/marketplace">Continue to marketplace →</a></section>
     <section className="card">
       <div className="section-head"><div><h2>Choose provider</h2><p className="sub">{market==="INDIA"?"Indian broker integrations":"Crypto exchange integrations"}</p></div><span className="pill">{list.length} researched</span></div>
       <input aria-label="Search providers" placeholder="Search broker or exchange…" value={query} onChange={e=>setQuery(e.target.value)} />
