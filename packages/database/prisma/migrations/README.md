@@ -19,4 +19,4 @@ Do not use `prisma db push` against shared, staging or production databases. Sch
 - Keep database credentials in AWS Secrets Manager; never place them in source control or browser configuration.
 - Do not run the one-time owner bootstrap until the initial migration is applied and the operator has verified the target database.
 
-The initial migration creates the user, invite, session, listing, subscription, broker connection, signal, copy order, disclosure and audit tables. Live broker execution is not enabled by these migrations.
+The initial migration creates the user, invite, session, listing, subscription, broker connection, signal, copy order, disclosure and audit tables. Follow-on migrations add durable per-subscriber copy intents, tenant-scoped signal idempotency, and explicit subscriber destination broker-account binding. Apply migrations strictly in timestamp order. These migrations do not create broker credentials, connect a broker, or enable live execution.
