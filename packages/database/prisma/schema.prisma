@@ -99,6 +99,7 @@ model User {
   hostedSubscriptions HostSubscription[] @relation("HostSubscriptions")
   followedSubscriptions HostSubscription[] @relation("SubscriberSubscriptions")
   sessions        Session[]
+  copyIntents     CopyIntent[]
 }
 
 model Invite {
@@ -155,6 +156,7 @@ model BrokerConnection {
   updatedAt       DateTime @updatedAt
   user            User @relation(fields: [userId], references: [id])
   destinationFor HostSubscription[] @relation("SubscriptionDestinationConnection")
+  copyIntents CopyIntent[] @relation("IntentDestinationConnection")
   @@index([userId, market])
 }
 
@@ -233,6 +235,8 @@ model CopyIntent {
   updatedAt      DateTime @updatedAt
   signal         Signal @relation(fields: [signalId], references: [id])
   subscription   HostSubscription @relation(fields: [subscriptionId], references: [id])
+  subscriber     User @relation(fields: [subscriberId], references: [id])
+  destinationConnection BrokerConnection? @relation("IntentDestinationConnection", fields: [destinationConnectionId], references: [id], onDelete: SetNull)
   @@unique([signalId, subscriptionId])
   @@index([status, availableAt, createdAt])
   @@index([subscriberId, status, createdAt])
